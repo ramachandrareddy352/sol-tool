@@ -1,4 +1,5 @@
 import { LanguageProvider } from "./Context/LanguageContext";
+import SolanaWalletProvider from "../utils/WalletProvider";
 import "./globals.css";
 
 export const metadata = {
@@ -8,9 +9,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <LanguageProvider>{children}</LanguageProvider>
+        <SolanaWalletProvider>
+          <LanguageProvider>{children}</LanguageProvider>
+        </SolanaWalletProvider>
       </body>
     </html>
   );
