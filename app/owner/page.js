@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+
 import Banner from "@/component/Banner";
 import Header from "@/component/Header";
 import Headline from "@/component/Headline";
+import Footer from "@/component/Footer";
+import { useSolToolAnchorProgram } from "@/utils/fetch_fee_config";
+
 import { useLanguage } from "../Context/LanguageContext";
 import { useNetwork } from "../Context/NetworkContext";
-import Footer from "@/component/Footer";
+
 import { useWallet } from "@solana/wallet-adapter-react";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
-
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import {
   mplTokenMetadata,
@@ -30,6 +33,18 @@ import toast from "react-hot-toast";
 const Page = () => {
   const { language } = useLanguage();
   const { currentNetwork } = useNetwork();
+  const { solToolProgram, feeConfigPda } = useSolToolAnchorProgram();
+  const [fees, setFees] = useState(null);
+
+  useEffect(() => {
+    const fetchFeeConfig = async () => {
+      if (solToolProgram) {
+        const data = await solToolProgram.account.feeConfig.fetch(feeConfigPda);
+        setFees(data);
+      }
+    };
+    fetchFeeConfig();
+  }, [solToolProgram, feeConfigPda]);
 
   const t = {
     en: {
@@ -66,14 +81,18 @@ const Page = () => {
       errorUpdate: "Failed to update authority",
       connectWallet: "Please connect your wallet",
       noAuthority: "No authority to update",
-      feeRevoke: "Fee: 0.1 SOL",
-      feeUpdate: "Fee: 0.1 SOL",
+      revokeFeeLabel: "Revoke Fee:",
+      updateFeeLabel: "Update Fee:",
       checking: "Checking...",
       updating: "Updating...",
       invalidPubkey:
         "Invalid public key format. Must be a valid Solana address (32-44 characters, base58).",
+      pleaseWait: "Please wait",
+      loadingFee: "Loading fee configuration...",
     },
     ko: {
+      pleaseWait: "잠시만 기다려 주세요",
+      loadingFee: "수수료 설정을 불러오는 중입니다...",
       priorityFees: "소유권",
       heading: "메타",
       tokenAddress: "토큰 주소:",
@@ -107,8 +126,8 @@ const Page = () => {
       errorUpdate: "권한 업데이트 실패",
       connectWallet: "지갑을 연결하세요",
       noAuthority: "업데이트할 권한 없음",
-      feeRevoke: "수수료: 0.1 SOL",
-      feeUpdate: "수수료: 0.1 SOL",
+      revokeFeeLabel: "취소 수수료:",
+      updateFeeLabel: "업데이트 수수료:",
       checking: "확인 중...",
       updating: "업데이트 중...",
       invalidPubkey:
@@ -122,23 +141,19 @@ const Page = () => {
   const [checking, setChecking] = useState(false);
   const [isValidToken, setIsValidToken] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
   const [mintAuthority, setMintAuthority] = useState(null);
   const [freezeAuthority, setFreezeAuthority] = useState(null);
   const [updateAuthority, setUpdateAuthority] = useState(null);
   const [isMutable, setIsMutable] = useState(true); // Tracks if metadata is mutable
-
   const [newMintAuth, setNewMintAuth] = useState("");
   const [newFreezeAuth, setNewFreezeAuth] = useState("");
   const [newUpdateAuth, setNewUpdateAuth] = useState("");
-
   const [updating, setUpdating] = useState(false);
 
   // Dedicated connection for SPL token queries
   const connection = useMemo(() => {
-    if (!wallet.connected) return null;
     return new Connection(currentNetwork.rpc, "confirmed");
-  }, [wallet.connected, currentNetwork]);
+  }, [currentNetwork]);
 
   const umi = useMemo(() => {
     if (!wallet.connected || !wallet.publicKey || !connection) return null;
@@ -146,6 +161,23 @@ const Page = () => {
       .use(walletAdapterIdentity(wallet))
       .use(mplTokenMetadata());
   }, [wallet.connected, wallet.publicKey, connection]);
+
+  const getFee = (type, isUpdate) => {
+    if (!fees) return 0;
+    let feeKey;
+    if (type === "mint") {
+      feeKey = isUpdate ? "updateMintAuthorityFee" : "revokeMintAuthorityFee";
+    } else if (type === "freeze") {
+      feeKey = isUpdate
+        ? "updateFreezeAuthorityFee"
+        : "revokeFreezeAuthorityFee";
+    } else if (type === "update") {
+      feeKey = isUpdate
+        ? "updateMetadataAuthorityFee"
+        : "revokeMetadataAuthorityFee";
+    }
+    return Number(fees[feeKey]) / 1e9;
+  };
 
   const validateAndCreatePubkey = (address) => {
     try {
@@ -178,23 +210,19 @@ const Page = () => {
 
     try {
       const mintPubkey = validateAndCreatePubkey(tokenAddress);
-
       // Fetch SPL Token Mint
       const mint = await getMint(connection, mintPubkey);
-
       setMintAuthority(
         mint.mintAuthority ? mint.mintAuthority.toBase58() : null
       );
       setFreezeAuthority(
         mint.freezeAuthority ? mint.freezeAuthority.toBase58() : null
       );
-
       // Fetch Metaplex Metadata (if exists)
       try {
         const umiMintKey = umiPublicKey(mintPubkey.toBase58());
         const metadataPda = findMetadataPda(umi, { mint: umiMintKey });
         const metadata = await fetchMetadata(umi, metadataPda);
-
         setUpdateAuthority(metadata.updateAuthority.toString());
         setIsMutable(metadata.isMutable === true); // Strict boolean check
       } catch (err) {
@@ -205,7 +233,6 @@ const Page = () => {
         setUpdateAuthority(null);
         setIsMutable(true); // No metadata → no immutability constraint
       }
-
       setIsValidToken(true);
     } catch (error) {
       console.error("Token check error:", error);
@@ -235,7 +262,6 @@ const Page = () => {
       toast.error("Metadata is immutable — cannot modify update authority");
       return;
     }
-
     if (newAuth && !newAuth.trim()) {
       toast.error("Please enter a valid new address");
       return;
@@ -255,7 +281,6 @@ const Page = () => {
     try {
       const mintPubkey = umiPublicKey(tokenAddress.trim());
       let txBuilder;
-
       if (type === "mint") {
         txBuilder = setAuthority(umi, {
           owned: mintPubkey,
@@ -284,11 +309,8 @@ const Page = () => {
       }
 
       // Add service fee
-      const feeAddress = new PublicKey(
-        "Ezapurmy7RCgNo2F41xSsf6yk5mvtStkoqVQnw9fkaqN"
-      );
-      const feeAmount = sol(0.1);
-
+      const feeAddress = feeConfigPda;
+      const feeAmount = sol(getFee(type, !!newAuth));
       txBuilder = txBuilder.prepend(
         transferSol(umi, {
           source: umi.identity,
@@ -298,14 +320,12 @@ const Page = () => {
       );
 
       await txBuilder.sendAndConfirm(umi);
-
       toast.success(newAuth ? t.successUpdate : t.successRevoke);
 
       // Clear inputs
       if (type === "mint") setNewMintAuth("");
       else if (type === "freeze") setNewFreezeAuth("");
       else if (type === "update") setNewUpdateAuth("");
-
       // Refresh token data
       await checkToken();
     } catch (error) {
@@ -342,17 +362,14 @@ const Page = () => {
   ) => {
     const showControls =
       type !== "update" ? isRevocable(currentAuth) : canModifyUpdateAuthority;
-
     return (
       <div className="border border-[#E6E8EC] rounded p-4">
         <h3 className="font-bold text-lg mb-2">{title}</h3>
-
         <p className="text-sm mb-2">
           {type === "update" && !isMutable
             ? t.immutable
             : getAuthorityStatus(currentAuth)}
         </p>
-
         {type === "update" && !isMutable ? (
           <p className="text-red-600 text-sm mb-2">{t.notRevocable}</p>
         ) : isRevocable(currentAuth) ? (
@@ -360,7 +377,6 @@ const Page = () => {
         ) : (
           <p className="text-red-600 text-sm mb-2">{t.notRevocable}</p>
         )}
-
         {showControls && (
           <div className="space-y-3 mt-3">
             {/* Revoke Button */}
@@ -368,13 +384,18 @@ const Page = () => {
               type="button"
               onClick={() => updateAuthorityFun(type)}
               disabled={updating}
-              className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded text-sm disabled:opacity-50 w-full transition"
+              className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded text-sm disabled:opacity-50 w-full transition disabled:cursor-not-allowed"
             >
               {updating ? t.updating : revokeLabel}
             </button>
-
+            <small className="text-gray-500 block">
+              {t.revokeFeeLabel}{" "}
+              <span className="text-black font-bold">
+                {getFee(type, false)} SOL
+              </span>
+            </small>
             {/* Update with new address */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-12">
               <input
                 className="border border-[#E6E8EC] rounded px-3 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
                 type="text"
@@ -386,20 +407,32 @@ const Page = () => {
                 type="button"
                 onClick={() => updateAuthorityFun(type, newAuthState)}
                 disabled={updating || !newAuthState.trim()}
-                className="bg-[#02CCE6] hover:bg-cyan-600 text-white py-2 px-4 rounded text-sm disabled:opacity-50 transition"
+                className="bg-[#02CCE6] hover:bg-cyan-600 text-white py-2 px-4 rounded text-sm disabled:opacity-50 transition disabled:cursor-not-allowed"
               >
                 {updating ? t.updating : updateLabel}
               </button>
             </div>
+            <small className="text-gray-500 block mt-1">
+              {t.updateFeeLabel}{" "}
+              <span className="text-black font-bold">
+                {getFee(type, true)} SOL
+              </span>
+            </small>
           </div>
         )}
-
-        <small className="text-gray-500 block mt-3">
-          {type === "update" ? t.feeUpdate : t.feeRevoke}
-        </small>
       </div>
     );
   };
+
+  const LoadingPage = () => (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-[#02CCE6] mx-auto"></div>
+        <p className="mt-6 text-lg font-medium text-gray-700">{t.loadingFee}</p>
+        <p className="mt-1 text-sm text-gray-500">{t.pleaseWait}</p>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -407,81 +440,81 @@ const Page = () => {
       <Banner />
       <Headline translations={{ [language]: t }} />
 
-      <section className="max-w-3xl mx-auto p-6">
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          className="flex flex-col gap-8"
-        >
-          {/* Token Address Input */}
-          <div>
-            <label className="font-semibold block mb-2">{t.tokenAddress}</label>
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <input
-                  className="w-full border border-[#E6E8EC] rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
-                  type="text"
-                  placeholder={t.enterAddress}
-                  value={tokenAddress}
-                  onChange={(e) => setTokenAddress(e.target.value)}
-                />
+      {!fees ? (
+        <LoadingPage />
+      ) : (
+        <section className="max-w-3xl mx-auto p-6">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            className="flex flex-col gap-8"
+          >
+            {/* Token Address Input */}
+            <div>
+              <label className="font-semibold block mb-2">
+                {t.tokenAddress}
+              </label>
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <input
+                    className="w-full border border-[#E6E8EC] rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                    type="text"
+                    placeholder={t.enterAddress}
+                    value={tokenAddress}
+                    onChange={(e) => setTokenAddress(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={checkToken}
+                  disabled={checking || !tokenAddress.trim()}
+                  className="bg-[#02CCE6] text-white px-8 py-3 rounded font-medium disabled:cursor-not-allowed disabled:opacity-50 hover:bg-cyan-600 transition "
+                >
+                  {checking ? t.checking : t.check}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={checkToken}
-                disabled={checking || !tokenAddress.trim()}
-                className="bg-[#02CCE6] text-white px-8 py-3 rounded font-medium disabled:opacity-50 hover:bg-cyan-600 transition"
-              >
-                {checking ? t.checking : t.check}
-              </button>
             </div>
-          </div>
-
-          {errorMessage && (
-            <p className="text-red-600 text-center text-sm mt-2 font-medium">
-              {errorMessage}
-            </p>
-          )}
-
-          {/* Authority Sections */}
-          {isValidToken && (
-            <div className="grid gap-6 md:grid-cols-1">
-              {renderAuthoritySection(
-                "mint",
-                t.mintAuthority,
-                mintAuthority,
-                newMintAuth,
-                setNewMintAuth,
-                t.revokeMint,
-                t.updateMint
-              )}
-
-              {renderAuthoritySection(
-                "freeze",
-                t.freezeAuthority,
-                freezeAuthority,
-                newFreezeAuth,
-                setNewFreezeAuth,
-                t.revokeFreeze,
-                t.updateFreeze
-              )}
-
-              {renderAuthoritySection(
-                "update",
-                t.updateAuthority,
-                updateAuthority,
-                newUpdateAuth,
-                setNewUpdateAuth,
-                t.revokeUpdate,
-                t.updateUpdate
-              )}
-            </div>
-          )}
-        </form>
-      </section>
-
+            {errorMessage && (
+              <p className="text-red-600 text-center text-sm mt-2 font-medium">
+                {errorMessage}
+              </p>
+            )}
+            {/* Authority Sections */}
+            {isValidToken && (
+              <div className="grid gap-6 md:grid-cols-1">
+                {renderAuthoritySection(
+                  "mint",
+                  t.mintAuthority,
+                  mintAuthority,
+                  newMintAuth,
+                  setNewMintAuth,
+                  t.revokeMint,
+                  t.updateMint
+                )}
+                {renderAuthoritySection(
+                  "freeze",
+                  t.freezeAuthority,
+                  freezeAuthority,
+                  newFreezeAuth,
+                  setNewFreezeAuth,
+                  t.revokeFreeze,
+                  t.updateFreeze
+                )}
+                {renderAuthoritySection(
+                  "update",
+                  t.updateAuthority,
+                  updateAuthority,
+                  newUpdateAuth,
+                  setNewUpdateAuth,
+                  t.revokeUpdate,
+                  t.updateUpdate
+                )}
+              </div>
+            )}
+          </form>
+        </section>
+      )}
       <Footer />
     </>
   );
 };
-
 export default Page;
