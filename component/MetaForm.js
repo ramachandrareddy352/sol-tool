@@ -1,185 +1,480 @@
-'use client'
-import { MdOutlineFileUpload } from 'react-icons/md'
-import { useLanguage } from '@/app/Context/LanguageContext'
-import { IoIosInformationCircle } from 'react-icons/io'
+"use client";
+
+import { useState, useRef, useMemo } from "react";
+import Image from "next/image";
+import { MdOutlineFileUpload } from "react-icons/md";
+import { IoIosInformationCircle } from "react-icons/io";
+import { TiCancel } from "react-icons/ti";
+import { useLanguage } from "@/app/Context/LanguageContext";
+import { MetaFormTranslations as translations } from "../utils/MetaFormLanguague";
+
+import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
+import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
+import { mplTokenMetadata } from "@metaplex-foundation/mpl-token-metadata";
+import { irysUploader } from "@metaplex-foundation/umi-uploader-irys";
+import {
+  fetchMetadata,
+  findMetadataPda,
+  updateV1,
+} from "@metaplex-foundation/mpl-token-metadata";
+import {
+  publicKey,
+  sol,
+  createGenericFileFromBrowserFile,
+} from "@metaplex-foundation/umi";
+import { transferSol } from "@metaplex-foundation/mpl-toolbox";
+import { useWallet } from "@solana/wallet-adapter-react";
+import toast from "react-hot-toast";
 
 const MetaForm = () => {
-  const { language } = useLanguage()
-  const translations = {
-    en: {
-      tokenAddress: 'Token Address:',
-      enterAddress: 'Enter Address',
-      ownershipConfirmed: 'Ownership has not been Confirmed',
-      image: 'Image:',
-      uploadImage: 'Upload Image',
-      uploadImageDesc: '128x128 pixels,100KB or less, png file',
-      description: 'Description:',
-      descriptionDesc: 'Put the description of your Token',
-      check: 'Check',
-      addLinks: 'Add Social Links & Tags',
-      addLinksDesc: 'Add links to your token metadata',
-      website: 'Website:',
-      websitedesc: 'Put your Website:',
-      twitter: 'Twitter:',
-      twitterdesc: 'Put your Twitter:',
-      telegram: 'Telegram:',
-      telegramdesc: 'Put your Telegram:',
-      discord: 'Discord:',
-      update: 'Update',
-      fee: 'Fee',
-      discorddesc: 'Put your Discord:'
-    },
-    ko: {
-      tokenAddress: '토큰 주소:',
-      enterAddress: '주소 입력',
-      ownershipConfirmed: '소유권이 확인되지 않았습니다',
-      check: '확인',
-      image: '이미지:',
-      uploadImage: '이미지 업로드',
-      uploadImageDesc: '128x128픽셀, 100KB 이하, png 파일.',
-      description: '설명:',
-      descriptionDesc: '토큰에 대한 설명을 입력하세요',
-      addLinks: '소셜 링크 및 태그 추가',
-      addLinksDesc: '토큰 메타데이터에 링크 추가',
-      website: '웹사이트:',
-      websitedesc: '귀하의 웹사이트를 넣으세요',
-      twitter: '트위터:',
-      twitterdesc: '트위터를 넣어주세요',
-      telegram: '텔레그램:',
-      telegramdesc: '전보를 넣어',
-      update: '업데이트',
-      fee: '수수료',
-      discord: '디스코드:',
-      discorddesc: '당신의 불화를 넣어'
+  const { language } = useLanguage();
+  const t = translations[language];
+
+  const wallet = useWallet();
+  const fileInputRef = useRef(null);
+
+  const [tokenAddress, setTokenAddress] = useState("");
+  const [imageFile, setImageFile] = useState(null); // Raw File object
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [existingImageUri, setExistingImageUri] = useState("");
+  const [description, setDescription] = useState("");
+  const [website, setWebsite] = useState("");
+  const [twitter, setTwitter] = useState("");
+  const [telegram, setTelegram] = useState("");
+  const [discord, setDiscord] = useState("");
+  const [socialEnabled, setSocialEnabled] = useState(false);
+
+  const [checking, setChecking] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [currentMetadata, setCurrentMetadata] = useState(null);
+  const [isHoveringImage, setIsHoveringImage] = useState(false);
+
+  const umi = useMemo(() => {
+    if (!wallet.connected || !wallet.publicKey) return null;
+    return createUmi("https://api.devnet.solana.com") // Change to devnet if needed
+      .use(walletAdapterIdentity(wallet))
+      .use(mplTokenMetadata())
+      .use(irysUploader());
+  }, [wallet.connected, wallet.publicKey]);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload a valid image file");
+      return;
     }
-  }
+    if (file.size > 500 * 1024) {
+      toast.error("Image must be 500KB or less");
+      return;
+    }
+
+    setImageFile(file);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const checkTokenMetadata = async () => {
+    if (!umi) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+    if (!tokenAddress.trim()) {
+      toast.error("Please enter a token address");
+      return;
+    }
+
+    setChecking(true);
+    setVerificationStatus(null);
+    setStatusMessage("");
+    setExistingImageUri("");
+    setDescription("");
+    setWebsite("");
+    setTwitter("");
+    setTelegram("");
+    setDiscord("");
+    setSocialEnabled(false);
+    removeImage();
+
+    try {
+      const mint = publicKey(tokenAddress.trim());
+      const metadataPda = findMetadataPda(umi, { mint });
+      const metadataAccount = await fetchMetadata(umi, metadataPda);
+
+      const updateAuthority = metadataAccount.updateAuthority;
+      const isMutable = metadataAccount.isMutable === true;
+      const walletPubkey = umi.identity.publicKey;
+
+      if (updateAuthority.toString() !== walletPubkey.toString()) {
+        setVerificationStatus("error");
+        setStatusMessage("Update authority does not match your wallet");
+        toast.error("You are not the update authority");
+        setChecking(false);
+        return;
+      }
+
+      if (!isMutable) {
+        setVerificationStatus("error");
+        setStatusMessage("Metadata is immutable and cannot be updated");
+        toast.error("This token's metadata is frozen");
+        setChecking(false);
+        return;
+      }
+
+      setCurrentMetadata(metadataAccount);
+      setVerificationStatus("success");
+      setStatusMessage("Ownership verified! You can now update the metadata.");
+      toast.success("Ready to update metadata");
+
+      console.log(metadataAccount.uri);
+
+      // Load existing off-chain metadata
+      if (metadataAccount?.uri && metadataAccount.uri.trim()) {
+        try {
+          const resp = await fetch(metadataAccount.uri.trim());
+          if (resp.ok) {
+            const json = await resp.json();
+            setDescription(json.description || "");
+            setWebsite(json.external_url || "");
+            setExistingImageUri(json.image || "");
+
+            if (json.properties?.links) {
+              const links = json.properties.links;
+              setTwitter(links.twitter || "");
+              setTelegram(links.telegram || "");
+              setDiscord(links.discord || "");
+              if (Object.keys(links).length > 0) setSocialEnabled(true);
+            }
+          }
+        } catch (err) {
+          console.log("Could not fetch existing metadata JSON");
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      setVerificationStatus("error");
+      setStatusMessage("Invalid token or no Metaplex metadata found");
+      toast.error("Token not found or has no valid metadata");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const updateMetadata = async () => {
+    if (!umi || verificationStatus !== "success" || !currentMetadata) {
+      toast.error("Verify ownership first");
+      return;
+    }
+    if (!description.trim()) {
+      toast.error("Description is required");
+      return;
+    }
+
+    setUpdating(true);
+
+    try {
+      let imageUri = existingImageUri;
+
+      if (imageFile) {
+        const genericFile = await createGenericFileFromBrowserFile(imageFile);
+        [imageUri] = await umi.uploader.upload([genericFile]);
+        toast.success("New image uploaded");
+      }
+
+      const properties = {
+        files: [
+          { uri: imageUri, type: imageFile ? imageFile.type : "image/png" },
+        ],
+        category: "image",
+      };
+
+      if (socialEnabled) {
+        const links = {};
+        if (website.trim()) links.website = website.trim();
+        if (twitter.trim()) links.twitter = twitter.trim();
+        if (telegram.trim()) links.telegram = telegram.trim();
+        if (discord.trim()) links.discord = discord.trim();
+        if (Object.keys(links).length > 0) properties.links = links;
+      }
+
+      const metadataJson = {
+        name: "",
+        symbol: "",
+        description: description.trim(),
+        image: imageUri,
+        external_url: socialEnabled && website.trim() ? website.trim() : "",
+        properties,
+      };
+
+      const metadataUri = await umi.uploader.uploadJson(metadataJson);
+      toast.success("Metadata JSON uploaded");
+
+      const mint = publicKey(tokenAddress.trim());
+      const metadataPda = findMetadataPda(umi, { mint });
+
+      const feeAddress = publicKey(
+        "Ezapurmy7RCgNo2F41xSsf6yk5mvtStkoqVQnw9fkaqN"
+      );
+      const feeAmount = sol(0.1);
+
+      // SAFELY reconstruct the DataV2 struct
+      const originalData = currentMetadata.data || {};
+      const safeData = {
+        name: originalData.name || "",
+        symbol: originalData.symbol || "",
+        uri: metadataUri,
+        sellerFeeBasisPoints: originalData.sellerFeeBasisPoints || 0,
+        // Do NOT include creators here!
+        primarySaleHappened: originalData.primarySaleHappened || false,
+        isMutable: originalData.isMutable ?? true,
+        tokenStandard: originalData.tokenStandard || null,
+        collection: originalData.collection || null,
+        uses: originalData.uses || null,
+        collectionDetails: originalData.collectionDetails || null,
+        programmableConfig: originalData.programmableConfig || null,
+      };
+
+      let txBuilder = updateV1(umi, {
+        mint,
+        metadata: metadataPda,
+        data: safeData, // Use fully safe object
+        authority: umi.identity,
+      });
+
+      txBuilder = txBuilder.prepend(
+        transferSol(umi, {
+          source: umi.identity,
+          destination: feeAddress,
+          amount: feeAmount,
+        })
+      );
+
+      await txBuilder.sendAndConfirm(umi);
+      toast.success("Metadata updated successfully! 0.1 SOL fee sent.");
+      setStatusMessage("Update complete!");
+    } catch (error) {
+      console.error("Update failed:", error);
+      toast.error("Failed to update metadata");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
-    <section className='max-w-4xl mx-auto p-6'>
-      <form className='flex flex-col gap-10'>
+    <section className="max-w-4xl mx-auto p-6">
+      <form
+        className="flex flex-col gap-10"
+        onSubmit={(e) => e.preventDefault()}
+      >
+        {/* Token Address */}
         <div>
-          <label htmlFor='taddress'>
-            {translations[language].tokenAddress}
-          </label>
-          <div className='flex flex-col md:flex-row mt-1 justify-between gap-2 md:gap-5'>
-            <div className='md:flex-1/3 flex flex-col'>
+          <label className="font-semibold">{t.tokenAddress}</label>
+          <div className="flex flex-col md:flex-row mt-2 gap-4">
+            <div className="flex-1">
               <input
-                className='border border-[#E6E8EC] rounded px-2 py-2'
-                type='text'
-                placeholder={translations[language].enterAddress}
+                className="w-full border border-[#E6E8EC] rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                type="text"
+                placeholder={t.enterAddress}
+                value={tokenAddress}
+                onChange={(e) => setTokenAddress(e.target.value)}
               />
-              <small className='text-[#FF6838] font-semibold'>
-                {translations[language].ownershipConfirmed}
-              </small>
+              {verificationStatus && (
+                <p
+                  className={`mt-2 font-semibold ${
+                    verificationStatus === "success"
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {statusMessage}
+                </p>
+              )}
             </div>
-            <button className='md:flex-1/12 md:self-start cursor-pointer bg-[#02CCE6] text-white py-2 px-5 rounded'>
-              {translations[language].check}
+            <button
+              type="button"
+              onClick={checkTokenMetadata}
+              disabled={checking || !tokenAddress.trim()}
+              className="bg-[#02CCE6] text-white px-8 h-12 rounded font-medium disabled:opacity-50"
+            >
+              {checking ? "Checking..." : t.check}
             </button>
           </div>
         </div>
 
-        <div className='flex-col md:flex-row flex justify-between gap-6'>
-          <div className='flex flex-col flex-1/2'>
-            <label className='text-black mb-1'>
-              <sup className='text-red-500 font-bold'>*</sup>
-              {translations[language].image}
-            </label>
-            <div className='border h-32 border-[#E6E8EC] p-1.5 rounded-sm flex flex-col items-center justify-center cursor-pointer'>
-              <input type='file' className='hidden' />
-              <div className='text-3xl text-[#02CCE6]'>
-                <MdOutlineFileUpload />
+        {/* Update Form */}
+        {verificationStatus === "success" && (
+          <>
+            {/* Image & Description */}
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Image */}
+              <div className="flex flex-col">
+                <label className="text-black mb-1 font-medium">
+                  <sup className="text-red-500 font-bold">*</sup> {t.image}
+                </label>
+                <div
+                  onMouseEnter={() => setIsHoveringImage(true)}
+                  onMouseLeave={() => setIsHoveringImage(false)}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative border-2 border-dashed border-[#E6E8EC] h-64 rounded-lg overflow-hidden cursor-pointer hover:border-[#02CCE6] transition"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+
+                  {previewUrl || existingImageUri ? (
+                    <Image
+                      src={previewUrl || existingImageUri}
+                      alt="Token Image"
+                      fill
+                      unoptimized
+                      className="object-contain"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <MdOutlineFileUpload className="text-5xl text-[#02CCE6]" />
+                      <p className="mt-2 text-gray-600">{t.uploadImage}</p>
+                    </div>
+                  )}
+
+                  {(previewUrl || existingImageUri) && isHoveringImage && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeImage();
+                        }}
+                        className="bg-red-600 text-white rounded-full p-3 hover:bg-red-700"
+                      >
+                        <TiCancel size={36} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <small className="text-gray-500 mt-1">
+                  Any image • Max 500KB
+                </small>
               </div>
-              <div>{translations[language].uploadImage}</div>
-            </div>
-            <small className='text-gray-500'>
-              {translations[language].uploadImageDesc}
-            </small>
-          </div>
 
-          {/* Description Field */}
-          <div className='flex flex-col flex-1/2'>
-            <label className='text-black mb-1'>
-              <sup className='text-red-500 font-bold'>*</sup>
-              {translations[language].description}
-            </label>
-            <textarea
-              placeholder={translations[language].descriptionDesc}
-              className='border resize-none h-32 border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400'
-            ></textarea>
-          </div>
-        </div>
+              {/* Description */}
+              <div className="flex flex-col">
+                <label className="text-black mb-1 font-medium">
+                  <sup className="text-red-500 font-bold">*</sup>{" "}
+                  {t.description}
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder={t.descriptionDesc}
+                  className="border border-[#E6E8EC] p-3 rounded h-64 resize-none focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                />
+              </div>
+            </div>
 
-        <div className=' flex flex-col gap-2'>
-          <div className='flex items-center gap-1'>
-            <h1 className='font-bold text-[16px]'>
-              {translations[language].addLinks}
-            </h1>
-            <div className='font-bold text-[20px]'>
-              <IoIosInformationCircle />
-            </div>
-            <label className='switch'>
-              <input type='checkbox' />
-              <span className='slider'></span>
-            </label>
-          </div>
-          <small className='text-gray-500'>
-            {translations[language].addLinksDesc}
-          </small>
-          <div className='flex-col md:flex-row flex md:items-center justify-between gap-5'>
-            <div className='flex flex-col'>
-              <label className='text-black mb-1'>
-                {translations[language].website}
-              </label>
-              <input
-                type='text'
-                placeholder={translations[language].websitedesc}
-                className='border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400'
-              />
-            </div>
-            <div className='flex flex-col'>
-              <label className='text-black mb-1'>
-                {translations[language].twitter}
-              </label>
-              <input
-                type='text'
-                placeholder={translations[language].websitedesc}
-                className='border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400'
-              />
-            </div>
-            <div className='flex flex-col'>
-              <label className='text-black mb-1'>
-                {translations[language].telegram}
-              </label>
-              <input
-                type='text'
-                placeholder={translations[language].telegramdesc}
-                className='border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400'
-              />
-            </div>
-            <div className='flex flex-col'>
-              <label className='text-black mb-1'>
-                {translations[language].discord}
-              </label>
-              <input
-                type='text'
-                placeholder={translations[language].discorddesc}
-                className='border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400'
-              />
-            </div>
-          </div>
-        </div>
+            {/* Social Links */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-lg">{t.addLinks}</h3>
+                <IoIosInformationCircle className="text-xl text-gray-500" />
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={socialEnabled}
+                    onChange={(e) => setSocialEnabled(e.target.checked)}
+                  />
+                  <span className="slider"></span>
+                </label>
+              </div>
+              <small className="text-gray-500">{t.addLinksDesc}</small>
 
-        <div className='text-center'>
-          <div className='mt-3 text-sm flex gap-2 justify-center items-center text-gray-400'>
-            {translations[language].fee}
-            <span className=''>0.20 SOL</span>
-          </div>
-          <button className='bg-[#02CCE6] cursor-pointer px-12 mt-2 rounded text-white py-2'>
-            {translations[language].update}
-          </button>
-        </div>
+              {socialEnabled && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      {t.website}
+                    </label>
+                    <input
+                      type="url"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      placeholder={t.websitedesc}
+                      className="w-full border border-[#E6E8EC] p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      {t.twitter}
+                    </label>
+                    <input
+                      type="url"
+                      value={twitter}
+                      onChange={(e) => setTwitter(e.target.value)}
+                      placeholder="https://twitter.com/yourproject"
+                      className="w-full border border-[#E6E8EC] p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      {t.telegram}
+                    </label>
+                    <input
+                      type="url"
+                      value={telegram}
+                      onChange={(e) => setTelegram(e.target.value)}
+                      placeholder={t.telegramdesc}
+                      className="w-full border border-[#E6E8EC] p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      {t.discord}
+                    </label>
+                    <input
+                      type="url"
+                      value={discord}
+                      onChange={(e) => setDiscord(e.target.value)}
+                      placeholder={t.discorddesc}
+                      className="w-full border border-[#E6E8EC] p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Submit */}
+            <div className="text-center">
+              <p className="text-gray-500 mb-4">
+                {t.fee}: <span className="font-bold text-black">0.10 SOL</span>
+              </p>
+              <button
+                type="button"
+                onClick={updateMetadata}
+                disabled={updating || !description.trim()}
+                className="bg-[#02CCE6] text-white px-16 py-3 rounded-lg font-semibold disabled:opacity-60"
+              >
+                {updating ? "Updating..." : t.update}
+              </button>
+            </div>
+          </>
+        )}
       </form>
     </section>
-  )
-}
+  );
+};
 
-export default MetaForm
+export default MetaForm;

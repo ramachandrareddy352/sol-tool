@@ -11,8 +11,11 @@
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+    "@metaplex-foundation/mpl-toolbox": "^0.10.0",
     "@metaplex-foundation/umi": "^1.4.1",
     "@metaplex-foundation/umi-bundle-defaults": "^1.4.1",
+    "@metaplex-foundation/umi-signer-wallet-adapters": "^1.4.1",
+    "@metaplex-foundation/umi-uploader-irys": "^1.4.2",
     "@solana/spl-token": "^0.4.14",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-react": "^0.15.39",
@@ -27,6 +30,7 @@
     "next-intl": "^3.26.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.6.0",
     "react-icons": "^5.5.0"
   },
   "devDependencies": {
