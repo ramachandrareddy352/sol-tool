@@ -362,62 +362,77 @@ const Page = () => {
   ) => {
     const showControls =
       type !== "update" ? isRevocable(currentAuth) : canModifyUpdateAuthority;
+
     return (
-      <div className="border border-[#E6E8EC] rounded p-4">
-        <h3 className="font-bold text-lg mb-2">{title}</h3>
-        <p className="text-sm mb-2">
+      <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
+        {/* Header */}
+        <h3 className="text-lg font-semibold text-gray-800 mb-1">{title}</h3>
+
+        {/* Status */}
+        <p className="text-sm text-gray-600 mt-1">
           {type === "update" && !isMutable
             ? t.immutable
             : getAuthorityStatus(currentAuth)}
         </p>
+
         {type === "update" && !isMutable ? (
-          <p className="text-red-600 text-sm mb-2">{t.notRevocable}</p>
+          <p className="text-red-600 text-sm mt-1">{t.notRevocable}</p>
         ) : isRevocable(currentAuth) ? (
-          <p className="text-green-600 text-sm mb-2">{t.revocable}</p>
+          <p className="text-green-600 text-sm mt-1">{t.revocable}</p>
         ) : (
-          <p className="text-red-600 text-sm mb-2">{t.notRevocable}</p>
+          <p className="text-red-600 text-sm mt-1">{t.notRevocable}</p>
         )}
+
+        {/* Actions */}
         {showControls && (
-          <div className="space-y-3 mt-3">
-            {/* Revoke Button */}
-            <button
-              type="button"
-              onClick={() => updateAuthorityFun(type)}
-              disabled={updating}
-              className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded text-sm disabled:opacity-50 w-full transition disabled:cursor-not-allowed"
-            >
-              {updating ? t.updating : revokeLabel}
-            </button>
-            <small className="text-gray-500 block">
-              {t.revokeFeeLabel}{" "}
-              <span className="text-black font-bold">
-                {getFee(type, false)} SOL
-              </span>
-            </small>
-            {/* Update with new address */}
-            <div className="flex gap-2 mt-12">
-              <input
-                className="border border-[#E6E8EC] rounded px-3 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
-                type="text"
-                placeholder={t.newAddress}
-                value={newAuthState}
-                onChange={(e) => setNewAuthState(e.target.value)}
-              />
+          <div className="mt-6 space-y-6">
+            {/* ================= Revoke ================= */}
+            <div>
               <button
                 type="button"
-                onClick={() => updateAuthorityFun(type, newAuthState)}
-                disabled={updating || !newAuthState.trim()}
-                className="bg-[#02CCE6] hover:bg-cyan-600 text-white py-2 px-4 rounded text-sm disabled:opacity-50 transition disabled:cursor-not-allowed"
+                onClick={() => updateAuthorityFun(type)}
+                disabled={updating}
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
-                {updating ? t.updating : updateLabel}
+                {updating ? t.updating : revokeLabel}
               </button>
+
+              <div className="mt-2 text-xs text-gray-600">
+                💰 {t.revokeFeeLabel}{" "}
+                <span className="font-semibold text-gray-800">
+                  {getFee(type, false)} SOL
+                </span>
+              </div>
             </div>
-            <small className="text-gray-500 block mt-1">
-              {t.updateFeeLabel}{" "}
-              <span className="text-black font-bold">
-                {getFee(type, true)} SOL
-              </span>
-            </small>
+
+            {/* ================= Update ================= */}
+            <div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <input
+                  className="flex-1 border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                  type="text"
+                  placeholder={t.newAddress}
+                  value={newAuthState}
+                  onChange={(e) => setNewAuthState(e.target.value)}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => updateAuthorityFun(type, newAuthState)}
+                  disabled={updating || !newAuthState.trim()}
+                  className="w-full sm:w-auto bg-[#02CCE6] hover:bg-cyan-600 text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {updating ? t.updating : updateLabel}
+                </button>
+              </div>
+
+              <div className="mt-2 text-xs text-gray-600">
+                💰 {t.updateFeeLabel}{" "}
+                <span className="font-semibold text-gray-800">
+                  {getFee(type, true)} SOL
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -443,44 +458,43 @@ const Page = () => {
       {!fees ? (
         <LoadingPage />
       ) : (
-        <section className="max-w-3xl mx-auto p-6">
-          <form
-            onSubmit={(e) => e.preventDefault()}
-            className="flex flex-col gap-8"
-          >
-            {/* Token Address Input */}
-            <div>
-              <label className="font-semibold block mb-2">
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-10">
+            {/* ================= Token Address Card ================= */}
+            <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
                 {t.tokenAddress}
               </label>
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <input
-                    className="w-full border border-[#E6E8EC] rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
-                    type="text"
-                    placeholder={t.enterAddress}
-                    value={tokenAddress}
-                    onChange={(e) => setTokenAddress(e.target.value)}
-                  />
-                </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <input
+                  className="flex-1 border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                  type="text"
+                  placeholder={t.enterAddress}
+                  value={tokenAddress}
+                  onChange={(e) => setTokenAddress(e.target.value)}
+                />
+
                 <button
                   type="button"
                   onClick={checkToken}
                   disabled={checking || !tokenAddress.trim()}
-                  className="bg-[#02CCE6] text-white px-8 py-3 rounded font-medium disabled:cursor-not-allowed disabled:opacity-50 hover:bg-cyan-600 transition "
+                  className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-600 transition"
                 >
                   {checking ? t.checking : t.check}
                 </button>
               </div>
+
+              {errorMessage && (
+                <p className="mt-3 text-sm font-medium text-red-600">
+                  {errorMessage}
+                </p>
+              )}
             </div>
-            {errorMessage && (
-              <p className="text-red-600 text-center text-sm mt-2 font-medium">
-                {errorMessage}
-              </p>
-            )}
-            {/* Authority Sections */}
+
+            {/* ================= Authority Cards ================= */}
             {isValidToken && (
-              <div className="grid gap-6 md:grid-cols-1">
+              <div className="grid gap-6">
                 {renderAuthoritySection(
                   "mint",
                   t.mintAuthority,
@@ -490,6 +504,7 @@ const Page = () => {
                   t.revokeMint,
                   t.updateMint
                 )}
+
                 {renderAuthoritySection(
                   "freeze",
                   t.freezeAuthority,
@@ -499,6 +514,7 @@ const Page = () => {
                   t.revokeFreeze,
                   t.updateFreeze
                 )}
+
                 {renderAuthoritySection(
                   "update",
                   t.updateAuthority,
