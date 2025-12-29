@@ -97,7 +97,6 @@ const FreezeForm = () => {
     const fetchFees = async () => {
       try {
         const data = await solToolProgram.account.feeConfig.fetch(feeConfigPda);
-        console;
         if (data) {
           const lamportsToSol = (lamports) => Number(lamports) / 1_000_000_000;
           setFees({
@@ -334,7 +333,7 @@ const FreezeForm = () => {
             {/* ================= Token Input Card ================= */}
             <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
               <label className="block text-sm font-semibold text-gray-700 mb-3">
-                {t.tokenAddress}
+                🪙 {t.tokenAddress}
               </label>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -352,24 +351,24 @@ const FreezeForm = () => {
                   disabled={checking || !tokenAddress.trim()}
                   className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
                 >
-                  {checking ? t.checking : t.check}
+                  🔍 {checking ? t.checking : t.check}
                 </button>
               </div>
 
               {errorMessage && (
                 <p className="mt-3 text-sm font-medium text-red-600">
-                  {errorMessage}
+                  ⚠️ {errorMessage}
                 </p>
               )}
             </div>
 
             {/* ================= Freeze / Unfreeze / Status ================= */}
             {isValidToken && isFreezeAuthority && (
-              <div className="">
+              <div>
                 {/* ================= Freeze ================= */}
                 <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 mb-4 shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                    {t.freeze}
+                    ❄️ {t.freeze}
                   </h3>
 
                   <div className="flex flex-col sm:flex-row gap-4">
@@ -386,7 +385,7 @@ const FreezeForm = () => {
                       disabled={updatingFreeze || !userAddressFreeze.trim()}
                       className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
                     >
-                      {updatingFreeze ? t.freezing : t.freeze}
+                      ❄️ {updatingFreeze ? t.freezing : t.freeze}
                     </button>
                   </div>
 
@@ -401,7 +400,7 @@ const FreezeForm = () => {
                 {/* ================= Unfreeze ================= */}
                 <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 mb-4 shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                    {t.unfreeze}
+                    🔓 {t.unfreeze}
                   </h3>
 
                   <div className="flex flex-col sm:flex-row gap-4">
@@ -418,7 +417,7 @@ const FreezeForm = () => {
                       disabled={updatingUnfreeze || !userAddressUnfreeze.trim()}
                       className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
                     >
-                      {updatingUnfreeze ? t.unfreezing : t.unfreeze}
+                      🔓 {updatingUnfreeze ? t.unfreezing : t.unfreeze}
                     </button>
                   </div>
 
@@ -430,10 +429,10 @@ const FreezeForm = () => {
                   </div>
                 </div>
 
-                {/* ================= Status Check (Full Width) ================= */}
-                <div className="md:col-span-2 bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
+                {/* ================= Status Check ================= */}
+                <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                    {t.checkStatus}
+                    🔍 {t.checkStatus}
                   </h3>
 
                   <div className="flex flex-col sm:flex-row gap-4">
@@ -450,7 +449,7 @@ const FreezeForm = () => {
                       disabled={checkingStatus || !userAddressCheck.trim()}
                       className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
                     >
-                      {checkingStatus ? t.checkingStatus : t.checkStatus}
+                      🔎 {checkingStatus ? t.checkingStatus : t.checkStatus}
                     </button>
                   </div>
 
@@ -462,6 +461,7 @@ const FreezeForm = () => {
                           : "text-green-600"
                       }`}
                     >
+                      {isFrozenStatus ? "❄️ " : "✅ "}
                       {statusMessage}
                     </p>
                   )}

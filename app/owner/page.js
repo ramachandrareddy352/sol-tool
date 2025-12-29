@@ -463,7 +463,7 @@ const Page = () => {
             {/* ================= Token Address Card ================= */}
             <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
               <label className="block text-sm font-semibold text-gray-700 mb-3">
-                {t.tokenAddress}
+                🪙 {t.tokenAddress}
               </label>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -481,13 +481,13 @@ const Page = () => {
                   disabled={checking || !tokenAddress.trim()}
                   className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-600 transition"
                 >
-                  {checking ? t.checking : t.check}
+                  🔍 {checking ? t.checking : t.check}
                 </button>
               </div>
 
               {errorMessage && (
                 <p className="mt-3 text-sm font-medium text-red-600">
-                  {errorMessage}
+                  ⚠️ {errorMessage}
                 </p>
               )}
             </div>
@@ -495,35 +495,45 @@ const Page = () => {
             {/* ================= Authority Cards ================= */}
             {isValidToken && (
               <div className="grid gap-6">
-                {renderAuthoritySection(
-                  "mint",
-                  t.mintAuthority,
-                  mintAuthority,
-                  newMintAuth,
-                  setNewMintAuth,
-                  t.revokeMint,
-                  t.updateMint
-                )}
+                {/* Mint Authority */}
+                <div>
+                  {/* Icon injected via title */}
+                  {renderAuthoritySection(
+                    "mint",
+                    <>🪙 {t.mintAuthority}</>,
+                    mintAuthority,
+                    newMintAuth,
+                    setNewMintAuth,
+                    t.revokeMint,
+                    t.updateMint
+                  )}
+                </div>
 
-                {renderAuthoritySection(
-                  "freeze",
-                  t.freezeAuthority,
-                  freezeAuthority,
-                  newFreezeAuth,
-                  setNewFreezeAuth,
-                  t.revokeFreeze,
-                  t.updateFreeze
-                )}
+                {/* Freeze Authority */}
+                <div>
+                  {renderAuthoritySection(
+                    "freeze",
+                    <>❄️ {t.freezeAuthority}</>,
+                    freezeAuthority,
+                    newFreezeAuth,
+                    setNewFreezeAuth,
+                    t.revokeFreeze,
+                    t.updateFreeze
+                  )}
+                </div>
 
-                {renderAuthoritySection(
-                  "update",
-                  t.updateAuthority,
-                  updateAuthority,
-                  newUpdateAuth,
-                  setNewUpdateAuth,
-                  t.revokeUpdate,
-                  t.updateUpdate
-                )}
+                {/* Metadata Authority */}
+                <div>
+                  {renderAuthoritySection(
+                    "update",
+                    <>📝 {t.updateAuthority}</>,
+                    updateAuthority,
+                    newUpdateAuth,
+                    setNewUpdateAuth,
+                    t.revokeUpdate,
+                    t.updateUpdate
+                  )}
+                </div>
               </div>
             )}
           </form>
