@@ -451,131 +451,134 @@ export default function TokenForm() {
     <div className="max-w-4xl mx-auto p-6">
       <form onSubmit={handleSubmit} className="mt-8">
         {/* Token Name, Symbol, Decimals, Supply Input */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Token Name Input */}
-          <div className="flex flex-col">
-            <TooltipLabel
-              label={translations[language]?.name}
-              tooltip={translations[language]?.nameTooltip}
-              required={true}
-            />
+        <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
+            🪙 Token Details
+          </h3>
 
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => {
-                const value = e.target.value.trim();
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Token Name */}
+            <div className="flex flex-col">
+              <TooltipLabel
+                label={translations[language]?.name}
+                tooltip={translations[language]?.nameTooltip}
+                required
+              />
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  const value = e.target.value.trim();
+                  if (value.length > 50) {
+                    toast.error(translations[language]?.nameExceedLengthError);
+                    return;
+                  }
+                  setName(value);
+                }}
+                placeholder={translations[language]?.nameplace}
+                className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+              />
+            </div>
 
-                if (value.length > 50) {
-                  toast.error(translations[language]?.nameExceedLengthError);
-                  return;
-                }
-                setName(value);
-              }}
-              placeholder={translations[language]?.nameplace}
-              className="border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
+            {/* Token Symbol */}
+            <div className="flex flex-col">
+              <TooltipLabel
+                label={translations[language]?.symbol}
+                tooltip={translations[language]?.symbolTooltip}
+                required
+              />
+              <input
+                type="text"
+                value={symbol}
+                onChange={(e) => {
+                  const value = e.target.value.trim();
+                  if (value.length > 10) {
+                    toast.error(
+                      translations[language]?.symbolExceedLengthError
+                    );
+                    return;
+                  }
+                  setSymbol(value);
+                }}
+                placeholder={translations[language]?.symbolplace}
+                className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+              />
+            </div>
 
-          {/* Token Symbol Input */}
-          <div className="flex flex-col">
-            <TooltipLabel
-              label={translations[language]?.symbol}
-              tooltip={translations[language]?.symbolTooltip}
-              required={true}
-            />
-            <input
-              type="text"
-              value={symbol}
-              onChange={(e) => {
-                const value = e.target.value.trim();
+            {/* Decimals */}
+            <div className="flex flex-col">
+              <TooltipLabel
+                label={translations[language]?.decimals}
+                tooltip={translations[language]?.decimalTooltip}
+                required
+              />
+              <input
+                type="number"
+                value={decimals}
+                min={1}
+                max={12}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (value === 0 || value > 12) {
+                    toast.error(translations[language]?.decimalError);
+                    return;
+                  }
+                  setDecimals(value);
+                }}
+                className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {translations[language]?.decimaldesc}
+              </p>
+            </div>
 
-                if (value.length > 10) {
-                  toast.error(translations[language]?.symbolExceedLengthError);
-                  return;
-                }
-                setSymbol(value);
-              }}
-              placeholder={translations[language]?.symbolplace}
-              className="border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
-
-          {/* Token Decimal Input */}
-          <div className="flex flex-col">
-            <TooltipLabel
-              label={translations[language]?.decimals}
-              tooltip={translations[language]?.decimalTooltip}
-              required={true}
-            />
-            <input
-              type="number"
-              value={decimals}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                if (value === 0 || value > 12) {
-                  toast.error(translations[language]?.decimalError);
-                  return;
-                }
-                setDecimals(Number(e.target.value));
-              }}
-              min={1}
-              max={12}
-              className="border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-            <small className="text-gray-500">
-              {translations[language]?.decimaldesc}
-            </small>
-          </div>
-
-          {/* Token Supply Input */}
-          <div className="flex flex-col">
-            <TooltipLabel
-              label={translations[language]?.supply}
-              tooltip={translations[language]?.supplyTooltip}
-              required={false}
-            />
-            <input
-              type="number"
-              value={supply}
-              onChange={(e) => setSupply(Number(e.target.value))}
-              className="border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-            <small className="text-gray-500">
-              {translations[language]?.supplydesc}
-            </small>
+            {/* Supply */}
+            <div className="flex flex-col">
+              <TooltipLabel
+                label={translations[language]?.supply}
+                tooltip={translations[language]?.supplyTooltip}
+              />
+              <input
+                type="number"
+                value={supply}
+                onChange={(e) => setSupply(Number(e.target.value))}
+                className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {translations[language]?.supplydesc}
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Token Description & Image Input */}
-        <div className="flex flex-col md:flex-row mt-5 justify-between gap-6">
-          {/* Token Description Input */}
-          <div className="flex flex-col flex-1/2">
-            <TooltipLabel
-              label={translations[language]?.description}
-              tooltip={translations[language]?.descriptionTooltip}
-              required={true}
-            />
+        <div className="grid md:grid-cols-2 gap-8 mt-8">
+          {/* Description */}
+          <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              📝 {translations[language]?.description}
+            </h3>
+
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={translations[language]?.descriptionDesc}
-              className="border resize-none h-52 border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              rows={10}
+              className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-[#02CCE6]"
             />
           </div>
 
-          {/* Token Image Input */}
-          <div className="flex flex-col flex-1/2">
-            <TooltipLabel
-              label={translations[language]?.image}
-              tooltip={translations[language]?.imageTooltip}
-              required={true}
-            />
+          {/* Image */}
+          <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              🖼️ {translations[language]?.image}
+            </h3>
+
             <div
-              className="border h-52 border-[#E6E8EC] p-1.5 rounded-sm flex flex-col items-center justify-center cursor-pointer relative overflow-hidden"
               onClick={handleImageClick}
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
+              className="relative border-2 border-dashed border-[#E6E8EC] rounded-xl h-56 cursor-pointer overflow-hidden hover:border-[#02CCE6] transition"
             >
               <input
                 ref={fileInputRef}
@@ -584,11 +587,12 @@ export default function TokenForm() {
                 className="hidden"
                 onChange={handleImageUpload}
               />
+
               {previewUrl ? (
                 <>
                   <Image
                     src={previewUrl}
-                    alt="Uploaded Preview"
+                    alt="Token Image"
                     fill
                     unoptimized
                     className="object-contain"
@@ -600,13 +604,13 @@ export default function TokenForm() {
                           e.stopPropagation();
                           handleImageClick();
                         }}
-                        className="px-3 py-1 text-sm rounded bg-white text-black font-semibold hover:bg-gray-200"
+                        className="px-4 py-2 bg-white text-black rounded-lg font-semibold"
                       >
                         {translations[language]?.Change}
                       </button>
                       <button
                         onClick={handleRemoveImage}
-                        className="px-3 py-1 text-sm rounded bg-red-500 text-white font-semibold hover:bg-red-600"
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold"
                       >
                         {translations[language]?.Remove}
                       </button>
@@ -614,31 +618,28 @@ export default function TokenForm() {
                   )}
                 </>
               ) : (
-                <>
-                  <div className="text-3xl text-[#02CCE6]">
-                    <MdOutlineFileUpload />
-                  </div>
-                  <div className="text-center">
+                <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                  <MdOutlineFileUpload size={42} />
+                  <p className="mt-2 text-sm font-medium">
                     {translations[language]?.uploadImage}
-                  </div>
-                </>
+                  </p>
+                </div>
               )}
             </div>
-            <small className="text-gray-500">
+
+            <p className="text-xs text-gray-500 mt-2">
               {translations[language]?.uploadImageDesc}
-            </small>
+            </p>
           </div>
         </div>
 
         {/* Token Metadata Social media links Input */}
-        <div className="my-8 flex flex-col gap-2">
-          <div className="flex items-center gap-1">
-            <h1 className="font-bold text-[16px]">
-              {translations[language]?.addLinks}
-            </h1>
-            <div className="font-bold text-[20px]">
-              <IoIosInformationCircle />
-            </div>
+        <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 mt-8 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              🌐 {translations[language]?.addLinks}
+            </h3>
+
             <label className="switch">
               <input
                 type="checkbox"
@@ -648,58 +649,57 @@ export default function TokenForm() {
               <span className="slider"></span>
             </label>
           </div>
+
           {socialSwitch && (
             <>
-              <small className="text-gray-500">
+              <p className="text-sm text-gray-500 mb-4">
                 {translations[language]?.addLinksDesc}
-              </small>
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                <div className="flex flex-col">
-                  <label className="text-black mb-1">
-                    {translations[language]?.website}
-                  </label>
+              </p>
+
+              <div className="grid md:grid-cols-2 gap-5">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-semibold">🌍 Website</label>
                   <input
                     type="url"
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
                     placeholder={translations[language]?.websitedesc}
-                    className="border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
                   />
                 </div>
-                <div className="flex flex-col">
-                  <label className="text-black mb-1">
-                    {translations[language]?.twitter}
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-semibold">
+                    🐦 Twitter / X
                   </label>
                   <input
                     type="url"
                     value={twitter}
                     onChange={(e) => setTwitter(e.target.value)}
                     placeholder={translations[language]?.twitterdesc}
-                    className="border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
                   />
                 </div>
-                <div className="flex flex-col">
-                  <label className="text-black mb-1">
-                    {translations[language]?.telegram}
-                  </label>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-semibold">✈️ Telegram</label>
                   <input
                     type="url"
                     value={telegram}
                     onChange={(e) => setTelegram(e.target.value)}
                     placeholder={translations[language]?.telegramdesc}
-                    className="border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
                   />
                 </div>
-                <div className="flex flex-col">
-                  <label className="text-black mb-1">
-                    {translations[language]?.discord}
-                  </label>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-semibold">🎮 Discord</label>
                   <input
                     type="url"
                     value={discord}
                     onChange={(e) => setDiscord(e.target.value)}
                     placeholder={translations[language]?.discorddesc}
-                    className="border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
                   />
                 </div>
               </div>
@@ -708,90 +708,114 @@ export default function TokenForm() {
         </div>
 
         {/* Advances options */}
-        <div className="my-8 flex flex-col gap-2">
-          <div className="flex gap-3 items-center">
-            <h1 className="gradient-text2 text-2xl">
-              {translations[language]?.advancedOptions}
-            </h1>
-          </div>
+        {/* ================= ADVANCED OPTIONS ================= */}
+        <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm my-8">
+          {/* Header */}
+          <h2 className="text-xl font-bold flex items-center gap-2 mb-6 gradient-text2">
+            ⚙️ {translations[language]?.advancedOptions}
+          </h2>
 
-          {/* Modify creator information on metadata */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1 flex-wrap">
-              <h1 className="font-bold text-[16px]">
-                {translations[language]?.modifyCreator}
-              </h1>
-              <div className="font-bold text-[20px]">
-                <IoIosInformationCircle />
+          {/* ================= MODIFY CREATOR ================= */}
+          <div className="border border-[#E6E8EC] rounded-xl p-5 bg-[#FCFCFD]">
+            {/* Title + Toggle */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-[16px] text-gray-800">
+                  👤 {translations[language]?.modifyCreator}
+                </h3>
+
+                <div className="relative group">
+                  <IoIosInformationCircle className="text-gray-400 cursor-pointer" />
+                  <div
+                    className="
+              absolute left-1/2 -translate-x-1/2 top-full mt-2
+              hidden group-hover:block
+              w-64 text-xs text-white
+              bg-black/80 px-3 py-2 rounded-lg
+              shadow-lg z-50
+            "
+                  >
+                    {translations[language]?.modifyCreatorDesc}
+                  </div>
+                </div>
               </div>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={advanceSwitch}
-                  onChange={handleAdvanceSwitch}
-                />
-                <span className="slider"></span>
-              </label>
-              <span>(+0.1 SOL)</span>
+
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-gray-600">
+                  +0.1 SOL
+                </span>
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={advanceSwitch}
+                    onChange={handleAdvanceSwitch}
+                  />
+                  <span className="slider"></span>
+                </label>
+              </div>
             </div>
 
+            {/* ================= CREATOR FORM ================= */}
             {advanceSwitch && (
-              <>
-                <small className="text-gray-500">
+              <div className="mt-6 flex flex-col gap-5">
+                <p className="text-sm text-gray-500">
                   {translations[language]?.modifyCreatorDesc}
-                </small>
-                <div>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="flex flex-col">
-                      <label className="text-black mb-1">
-                        {translations[language]?.creatorName}
-                      </label>
-                      <input
-                        type="text"
-                        value={creatorName}
-                        disabled={removeCreator}
-                        onChange={(e) => setCreatorName(e.target.value)}
-                        placeholder={translations[language]?.createNamePlace}
-                        className={`border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400
-  ${removeCreator ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
-`}
-                      />
-                    </div>
+                </p>
 
-                    <div className="flex flex-col">
-                      <label className="text-black mb-1">
-                        {translations[language]?.creatorWeb}
-                      </label>
-                      <input
-                        type="url"
-                        value={creatorWeb}
-                        disabled={removeCreator}
-                        onChange={(e) => setCreatorWeb(e.target.value)}
-                        placeholder={translations[language]?.createWebPlace}
-                        className={`border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400
-  ${removeCreator ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
-`}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col mt-4">
-                    <label className="text-black mb-1">
-                      {translations[language]?.creatorAddress}
+                {/* Creator Name & Website */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-semibold text-gray-700">
+                      🏷️ {translations[language]?.creatorName}
                     </label>
                     <input
                       type="text"
+                      value={creatorName}
                       disabled={removeCreator}
-                      value={creatorAddress}
-                      onChange={(e) => setCreatorAddress(e.target.value)}
-                      placeholder={translations[language]?.enterAddress}
-                      className={`border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400
-  ${removeCreator ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
-`}
+                      onChange={(e) => setCreatorName(e.target.value)}
+                      placeholder={translations[language]?.createNamePlace}
+                      className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]
+                ${removeCreator ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
+              `}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-semibold text-gray-700">
+                      🌐 {translations[language]?.creatorWeb}
+                    </label>
+                    <input
+                      type="url"
+                      value={creatorWeb}
+                      disabled={removeCreator}
+                      onChange={(e) => setCreatorWeb(e.target.value)}
+                      placeholder={translations[language]?.createWebPlace}
+                      className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]
+                ${removeCreator ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
+              `}
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-5">
+
+                {/* Creator Address */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-semibold text-gray-700">
+                    🔑 {translations[language]?.creatorAddress}
+                  </label>
+                  <input
+                    type="text"
+                    value={creatorAddress}
+                    disabled={removeCreator}
+                    onChange={(e) => setCreatorAddress(e.target.value)}
+                    placeholder={translations[language]?.enterAddress}
+                    className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]
+              ${removeCreator ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
+            `}
+                  />
+                </div>
+
+                {/* Remove Creator */}
+                <div className="flex items-center gap-4 pt-2">
                   <label className="switch">
                     <input
                       type="checkbox"
@@ -800,167 +824,184 @@ export default function TokenForm() {
                     />
                     <span className="slider"></span>
                   </label>
-                  <p className="text-sm font-semibold">
+
+                  <span className="text-sm font-semibold text-gray-700">
                     {translations[language]?.removeOption}
-                  </p>
-                  <div className="relative inline-block group">
+                  </span>
+
+                  <div className="relative group">
                     <IoInformationCircleOutline
                       size={18}
                       className="text-gray-400 cursor-pointer"
                     />
-
                     <div
                       className="
-      absolute left-1/2 -translate-x-1/2 top-full mt-2
-      hidden group-hover:block
-      w-64 text-xs text-white
-      bg-black/80 px-3 py-2 rounded-lg
-      shadow-lg z-50
-    "
+                absolute left-1/2 -translate-x-1/2 top-full mt-2
+                hidden group-hover:block
+                w-64 text-xs text-white
+                bg-black/80 px-3 py-2 rounded-lg
+                shadow-lg z-50
+              "
                     >
-                      {translations[language].removeCreatorTooltip}
+                      {translations[language]?.removeCreatorTooltip}
                     </div>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
 
-        <div className="my-8 flex flex-col gap-2">
-          <div className="flex items-center gap-1">
-            <h1 className="font-bold text-[16px]">
-              {translations[language]?.revokeAuthorities}
-            </h1>
-          </div>
-          <small className="text-gray-500">
+        {/* ================= REVOKE AUTHORITIES ================= */}
+        <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm my-8">
+          <h2 className="text-xl font-bold flex items-center gap-2 mb-1">
+            🔒 {translations[language]?.revokeAuthorities}
+          </h2>
+          <p className="text-sm text-gray-500 mb-6">
             {translations[language]?.revokeAuthoritiesDesc}
-          </small>
+          </p>
 
-          {/* Revoke Authorities */}
-          <div className="flex flex-col md:flex-row gap-6 my-6">
-            {/* Revoke freeze */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Freeze Authority */}
             <div
-              className={`${
-                freeze ? "border-grad" : ""
-              } flex relative rounded gap-3 py-3 px-2 border-[#E6E8EC] border-2 bg-[#FCFCFD]`}
+              className={`relative rounded-xl border-2 p-4 bg-[#FCFCFD] transition ${
+                freeze ? "border-grad" : "border-[#E6E8EC]"
+              }`}
             >
-              <div className="icon-grad">
-                {freeze ? (
-                  <FaRegSnowflake color="rgba(0, 181, 205, 1)" size={20} />
-                ) : (
-                  <FaRegSnowflake size={20} />
-                )}
-              </div>
-              <div className="text-[14px] flex-1">
-                <div className="flex justify-between items-center">
-                  <span className={`${freeze ? "gradient-text2" : ""}`}>
-                    {translations[language]?.revokeFreeze}
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <span>+0.1 SOL</span>
-                    <label className="switch-2">
-                      <input
-                        type="checkbox"
-                        checked={freeze}
-                        onChange={handleFreeze}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
+              <div className="flex gap-3 items-start">
+                <div className="icon-grad">
+                  <FaRegSnowflake
+                    size={20}
+                    color={freeze ? "#00b5cd" : "#777"}
+                  />
                 </div>
-                <p className="text-[#777E90]">
-                  {translations[language]?.revokeFreezeDesc}
-                </p>
+
+                <div className="flex-1 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span
+                      className={`font-semibold ${
+                        freeze ? "gradient-text2" : ""
+                      }`}
+                    >
+                      {translations[language]?.revokeFreeze}
+                    </span>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold">+0.1 SOL</span>
+                      <label className="switch-2">
+                        <input
+                          type="checkbox"
+                          checked={freeze}
+                          onChange={handleFreeze}
+                        />
+                        <span className="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <p className="text-[#777E90] mt-1">
+                    {translations[language]?.revokeFreezeDesc}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Revoke Mint */}
+            {/* Mint Authority */}
             <div
-              className={`${
-                mintAuth ? "border-grad" : ""
-              } flex relative rounded gap-3 py-3 px-2 border-[#E6E8EC] border-2 bg-[#FCFCFD]`}
+              className={`relative rounded-xl border-2 p-4 bg-[#FCFCFD] transition ${
+                mintAuth ? "border-grad" : "border-[#E6E8EC]"
+              }`}
             >
-              <div className="text-18px">
-                {mintAuth ? (
-                  <TiCancel size={24} color="rgba(0, 181, 205, 1)" />
-                ) : (
-                  <TiCancel size={24} />
-                )}
-              </div>
-              <div className="text-[14px] flex-1">
-                <div className="flex justify-between items-center">
-                  <span className={`${mintAuth ? "gradient-text2" : ""}`}>
-                    {translations[language]?.revokeMint}
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <span>+0.1 SOL</span>
-                    <label className="switch-2">
-                      <input
-                        type="checkbox"
-                        checked={mintAuth}
-                        onChange={handleMintAuth}
-                      />
-                      <span className="slider"></span>
-                    </label>
+              <div className="flex gap-3 items-start">
+                <TiCancel size={22} color={mintAuth ? "#00b5cd" : "#777"} />
+
+                <div className="flex-1 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span
+                      className={`font-semibold ${
+                        mintAuth ? "gradient-text2" : ""
+                      }`}
+                    >
+                      {translations[language]?.revokeMint}
+                    </span>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold">+0.1 SOL</span>
+                      <label className="switch-2">
+                        <input
+                          type="checkbox"
+                          checked={mintAuth}
+                          onChange={handleMintAuth}
+                        />
+                        <span className="slider"></span>
+                      </label>
+                    </div>
                   </div>
+
+                  <p className="text-[#777E90] mt-1">
+                    {translations[language]?.revokeMintDesc}
+                  </p>
                 </div>
-                <p className="text-[#777E90]">
-                  {translations[language]?.revokeMintDesc}
-                </p>
               </div>
             </div>
 
-            {/* Revoke update metadata */}
+            {/* Update Authority */}
             <div
-              className={`${
-                update ? "border-grad" : ""
-              } flex relative rounded gap-3 py-3 px-2 border-[#E6E8EC] border-2 bg-[#FCFCFD]`}
+              className={`relative rounded-xl border-2 p-4 bg-[#FCFCFD] transition ${
+                update ? "border-grad" : "border-[#E6E8EC]"
+              }`}
             >
-              <div className="text-18px">
-                {update ? (
-                  <FaLock size={20} color="rgba(0, 181, 205, 1)" />
-                ) : (
-                  <FaLock size={20} />
-                )}
-              </div>
-              <div className="text-[14px] flex-1">
-                <div className="flex justify-between items-center">
-                  <span className={`${update ? "gradient-text2" : ""}`}>
-                    {translations[language]?.revokeUpdate}
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <span>+0.1 SOL</span>
-                    <label className="switch-2">
-                      <input
-                        type="checkbox"
-                        checked={update}
-                        onChange={handleUpdate}
-                      />
-                      <span className="slider"></span>
-                    </label>
+              <div className="flex gap-3 items-start">
+                <FaLock size={18} color={update ? "#00b5cd" : "#777"} />
+
+                <div className="flex-1 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span
+                      className={`font-semibold ${
+                        update ? "gradient-text2" : ""
+                      }`}
+                    >
+                      {translations[language]?.revokeUpdate}
+                    </span>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold">+0.1 SOL</span>
+                      <label className="switch-2">
+                        <input
+                          type="checkbox"
+                          checked={update}
+                          onChange={handleUpdate}
+                        />
+                        <span className="slider"></span>
+                      </label>
+                    </div>
                   </div>
+
+                  <p className="text-[#777E90] mt-1">
+                    {translations[language]?.revokeUpdateDesc}
+                  </p>
                 </div>
-                <p className="text-[#777E90]">
-                  {translations[language]?.revokeUpdateDesc}
-                </p>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Personalizied address */}
-          <div className="my-4 flex flex-col gap-2">
-            <h1 className="text-2xl font-semibold flex items-center gap-2">
-              <BsGlobe2 />
-              <span>{translations[language]?.personalization}</span>
-            </h1>
-            <div className="flex items-center gap-1 flex-wrap">
-              <h1 className="font-bold text-[16px]">
+        {/* ================= PERSONALIZATION ================= */}
+        <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm my-8">
+          <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
+            <BsGlobe2 /> {translations[language]?.personalization}
+          </h2>
+
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm">
                 {translations[language]?.claim}
-              </h1>
-              <div className="font-bold text-[20px]">
-                <IoIosInformationCircle />
-              </div>
+              </span>
+              <IoIosInformationCircle className="text-gray-400" />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold">+0.1 SOL</span>
               <label className="switch">
                 <input
                   type="checkbox"
@@ -969,262 +1010,217 @@ export default function TokenForm() {
                 />
                 <span className="slider"></span>
               </label>
-              <span>(+0.1 SOL)</span>
             </div>
-            <p>{translations[language]?.personalize}</p>
-            {showPersonal && (
-              <>
-                <div className="flex gap-5 flex-col md:flex-row justify-between md:items-center">
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <label className="font-semibold">
-                          {translations[language]?.prefix}
-                        </label>
-                        <span className="text-gray-500">
-                          ({translations[language]?.max4})
-                        </span>
-                        <sup>*</sup>
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <label className="switch-2">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => setIsChecked(!isChecked)}
-                          />
-                          <span className="slider"></span>
-                        </label>
-                        <span className="font-semibold">
-                          {translations[language]?.enable}
-                        </span>
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      value={prefix}
-                      onChange={(e) => {
-                        let value = e.target.value;
-                        if (value.length > 4) {
-                          toast.error(translations[language]?.maxLength4);
-                          return;
-                        }
-                        setPrefix(value);
-                      }}
-                      placeholder={translations[language]?.pumpfront}
-                      disabled={!isChecked}
-                      className={`border w-full mt-2 border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                        !isChecked
-                          ? "bg-gray-200 cursor-not-allowed"
-                          : "bg-white"
-                      }`}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <label className="font-semibold">
-                          {translations[language]?.suffix}
-                        </label>
-                        <span className="text-gray-500">
-                          ({translations[language]?.max4})
-                        </span>
-                        <sup>*</sup>
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <label className="switch-2">
-                          <input
-                            type="checkbox"
-                            checked={isCheck}
-                            onChange={() => setIsCheck(!isCheck)}
-                          />
-                          <span className="slider"></span>
-                        </label>
-                        <span className="font-semibold">
-                          {translations[language]?.enable}
-                        </span>
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      value={suffix}
-                      onChange={(e) => {
-                        let value = e.target.value;
-                        if (value.length > 4) {
-                          toast.error(translations[language]?.maxLength4);
-                          return;
-                        }
-                        setSuffix(value);
-                      }}
-                      placeholder={translations[language]?.pump}
-                      disabled={!isCheck}
-                      className={`border w-full mt-2 border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                        !isCheck ? "bg-gray-200 cursor-not-allowed" : "bg-white"
-                      }`}
-                    />
-                  </div>
-                </div>
-                <div className="flex border rounded-3xl border-gray-400 justify-between items-center my-4 p-3">
-                  <p className="flex gap-2 items-center text-lg">
-                    <span className="font-bold md:text-2xl">
-                      <IoFlashOutline />
-                    </span>
-                    <span className="text-sm md:text-lg">
-                      {translations[language]?.addGen}
-                    </span>
-                  </p>
-                  <div
-                    className="flex gap-2 text-xl cursor-pointer font-semibold text-[#00c8f8] items-center"
-                    onClick={generateVanityAddress}
-                  >
-                    <LuRefreshCw
-                      className={`${isGenerating ? "animate-spin" : ""}`}
-                    />
-                    <p className="text-sm md:text-lg font-normal">
-                      {isGenerating
-                        ? translations[language]?.generating
-                        : translations[language]?.gend}
-                    </p>
-                  </div>
-                </div>
-                {generatedMint && (
-                  <div className="bg-green-100 p-3 rounded-lg">
-                    <strong>{translations[language]?.generatedAddress}</strong>{" "}
-                    {generatedMint.publicKey.toString()}
-                  </div>
-                )}
-                <div className="bg-[#fff9df] p-3 flex gap-3 items-center rounded-2xl">
-                  <div>
-                    <FaRegClock />
-                  </div>
-                  <div>{translations[language]?.paraprocess}</div>
-                </div>
-              </>
-            )}
           </div>
 
-          {/* Deleet account fee receiver */}
-          <div className="flex flex-col my-4  gap-2">
-            <div className="flex gap-2 items-center justify-between">
-              <h1 className="text-xl font-semibold">
-                <span>{translations[language].accdel}</span>
-              </h1>
-              <div>
-                <label className="switch">
+          <p className="text-sm text-gray-600 mt-2">
+            {translations[language]?.personalize}
+          </p>
+
+          {showPersonal && (
+            <>
+              {/* Prefix / Suffix */}
+              <div className="grid md:grid-cols-2 gap-6 mt-6">
+                {/* Prefix */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="font-semibold text-sm">
+                      {translations[language]?.prefix}
+                      <span className="text-gray-400 ml-1">
+                        ({translations[language]?.max4})
+                      </span>
+                    </label>
+                    <label className="switch-2">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => setIsChecked(!isChecked)}
+                      />
+                      <span className="slider"></span>
+                    </label>
+                  </div>
+
                   <input
-                    type="checkbox"
-                    checked={deletion}
-                    onChange={() => setDeletion((prev) => !prev)}
+                    type="text"
+                    value={prefix}
+                    disabled={!isChecked}
+                    onChange={(e) => {
+                      if (e.target.value.length > 4) {
+                        toast.error(translations[language]?.maxLength4);
+                        return;
+                      }
+                      setPrefix(e.target.value);
+                    }}
+                    placeholder={translations[language]?.pumpfront}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]
+              ${!isChecked ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
+            `}
                   />
-                  <span className="slider"></span>
-                </label>
-                <span className="ml-2">(0.1 SOL)</span>
-              </div>
-            </div>
-            {deletion && (
-              <>
-                <p>{translations[language].accdesc}</p>
-                <div className="flex my-2 justify-between flex-wrap">
-                  {/* Sol Tool */}
-                  <div className="flex items-center gap-3">
-                    <div>{translations[language].soltool}</div>
-                    <label className="switch-2">
-                      <input
-                        type="checkbox"
-                        checked={activeOption === "sol"}
-                        onChange={() =>
-                          setActiveOption(activeOption === "sol" ? "" : "sol")
-                        }
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {/* Token Creator */}
-                  <div className="flex items-center gap-3">
-                    <div>{translations[language].tokenCreator}</div>
-                    <label className="switch-2">
-                      <input
-                        type="checkbox"
-                        checked={activeOption === "token"}
-                        onChange={() =>
-                          setActiveOption(
-                            activeOption === "token" ? "" : "token"
-                          )
-                        }
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {/* Account Owner */}
-                  <div className="flex items-center gap-3">
-                    <div>{translations[language].accOwner}</div>
-                    <label className="switch-2">
-                      <input
-                        type="checkbox"
-                        checked={activeOption === "owner"}
-                        onChange={() =>
-                          setActiveOption(
-                            activeOption === "owner" ? "" : "owner"
-                          )
-                        }
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {/* Custom Address */}
-                  <div className="flex items-center gap-3">
-                    <div>{translations[language].customAddress}</div>
-                    <label className="switch-2">
-                      <input
-                        type="checkbox"
-                        checked={activeOption === "custom"}
-                        onChange={() =>
-                          setActiveOption(
-                            activeOption === "custom" ? "" : "custom"
-                          )
-                        }
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
                 </div>
-                {activeOption === "custom" ? (
-                  <div>
-                    <input
-                      type="text"
-                      value={customRefundAddress}
-                      onChange={(e) => setCustomRefundAddress(e.target.value)}
-                      placeholder={translations[language].enadd}
-                      className="border border-[#E6E8EC] p-1.5 rounded-sm focus:outline-none focus:ring-2 w-full md:w-[50%] focus:ring-blue-400"
-                    />
+
+                {/* Suffix */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="font-semibold text-sm">
+                      {translations[language]?.suffix}
+                      <span className="text-gray-400 ml-1">
+                        ({translations[language]?.max4})
+                      </span>
+                    </label>
+                    <label className="switch-2">
+                      <input
+                        type="checkbox"
+                        checked={isCheck}
+                        onChange={() => setIsCheck(!isCheck)}
+                      />
+                      <span className="slider"></span>
+                    </label>
                   </div>
-                ) : null}
-              </>
-            )}
+
+                  <input
+                    type="text"
+                    value={suffix}
+                    disabled={!isCheck}
+                    onChange={(e) => {
+                      if (e.target.value.length > 4) {
+                        toast.error(translations[language]?.maxLength4);
+                        return;
+                      }
+                      setSuffix(e.target.value);
+                    }}
+                    placeholder={translations[language]?.pump}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]
+              ${!isCheck ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
+            `}
+                  />
+                </div>
+              </div>
+
+              {/* Generate */}
+              <div className="flex justify-between items-center mt-6 border rounded-2xl p-4">
+                <div className="flex items-center gap-2 font-semibold">
+                  <IoFlashOutline /> {translations[language]?.addGen}
+                </div>
+                <div
+                  className="flex items-center gap-2 text-[#00c8f8] cursor-pointer"
+                  onClick={generateVanityAddress}
+                >
+                  <LuRefreshCw className={isGenerating ? "animate-spin" : ""} />
+                  {isGenerating
+                    ? translations[language]?.generating
+                    : translations[language]?.gend}
+                </div>
+              </div>
+
+              {generatedMint && (
+                <div className="bg-green-100 mt-4 p-3 rounded-xl text-sm max-h-24 overflow-y-auto">
+                  <strong className="block mb-1">
+                    {translations[language]?.generatedAddress}
+                  </strong>
+                  <span className="break-all">
+                    {generatedMint.publicKey.toString()}
+                  </span>
+                </div>
+              )}
+
+              <div className="bg-[#fff9df] mt-4 p-3 rounded-xl flex gap-2 items-center text-sm">
+                <FaRegClock /> {translations[language]?.paraprocess}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ================= ACCOUNT DELETION ================= */}
+        <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm my-8">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-bold">
+              🗑️ {translations[language].accdel}
+            </h2>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold">0.1 SOL</span>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={deletion}
+                  onChange={() => setDeletion((prev) => !prev)}
+                />
+                <span className="slider"></span>
+              </label>
+            </div>
           </div>
 
-          {/* Submit form*/}
-          <div className="text-center">
-            <div className="mt-3 text-sm py-2">
-              {translations[language]?.totalFees}{" "}
-              <span className="text-[#02CCE6]">{totalFee.toFixed(2)} SOL</span>
-            </div>
-            <button
-              type="button"
-              onClick={createSPLToken}
-              disabled={
-                !wallet.connected || !name || !symbol || !image || !description
-              }
-              className="bg-[#02CCE6] disabled:opacity-50 cursor-pointer px-4 rounded text-white py-2 disabled:cursor-not-allowed"
-            >
-              {creatingToken
-                ? translations[language]?.tokenCreating
-                : translations[language]?.createToken}
-            </button>
-          </div>
+          {deletion && (
+            <>
+              <p className="text-sm text-gray-600 mb-4">
+                {translations[language].accdesc}
+              </p>
+
+              <div className="grid md:grid-cols-4 gap-4">
+                {["sol", "token", "owner", "custom"].map((opt) => (
+                  <div
+                    key={opt}
+                    className="flex items-center justify-between border rounded-xl p-3"
+                  >
+                    <span className="text-sm font-semibold">
+                      {
+                        translations[language][
+                          opt === "sol"
+                            ? "soltool"
+                            : opt === "token"
+                            ? "tokenCreator"
+                            : opt === "owner"
+                            ? "accOwner"
+                            : "customAddress"
+                        ]
+                      }
+                    </span>
+                    <label className="switch-2">
+                      <input
+                        type="checkbox"
+                        checked={activeOption === opt}
+                        onChange={() =>
+                          setActiveOption(activeOption === opt ? "" : opt)
+                        }
+                      />
+                      <span className="slider"></span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              {activeOption === "custom" && (
+                <input
+                  type="text"
+                  value={customRefundAddress}
+                  onChange={(e) => setCustomRefundAddress(e.target.value)}
+                  placeholder={translations[language].enadd}
+                  className="mt-4 w-full md:w-1/2 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#02CCE6]"
+                />
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="text-center my-10">
+          <p className="text-sm mb-2">
+            {translations[language]?.totalFees}{" "}
+            <span className="text-[#02CCE6] font-bold">
+              {totalFee.toFixed(2)} SOL
+            </span>
+          </p>
+
+          <button
+            type="button"
+            onClick={createSPLToken}
+            disabled={
+              !wallet.connected || !name || !symbol || !image || !description
+            }
+            className="bg-[#02CCE6] px-8 py-3 rounded-xl text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-600 transition"
+          >
+            {creatingToken
+              ? translations[language]?.tokenCreating
+              : translations[language]?.createToken}
+          </button>
         </div>
       </form>
     </div>

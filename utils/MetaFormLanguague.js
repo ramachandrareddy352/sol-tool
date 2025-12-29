@@ -21,8 +21,12 @@ export const MetaFormTranslations = {
     update: "Update",
     fee: "Fee",
     discorddesc: "Put your Discord:",
+    pleaseWait: "Please wait",
+    loadingFee: "Loading fee configuration...",
   },
   ko: {
+    pleaseWait: "잠시만 기다려 주세요",
+    loadingFee: "수수료 설정을 불러오는 중입니다...",
     tokenAddress: "토큰 주소:",
     enterAddress: "주소 입력",
     ownershipConfirmed: "소유권이 확인되지 않았습니다",

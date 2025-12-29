@@ -41,3 +41,6 @@ export function useSolToolAnchorProgram() {
     feeConfigPda,
   };
 }
+
+// Address:  HR39BuPVcRtWXJmkXXcqi6D8dz8auQQpGfod8mf55YYB
+// Decimals:  6
