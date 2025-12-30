@@ -5,10 +5,15 @@ const LanguageContext = createContext();
 
 export function LanguageProvider({ children }) {
   const [language, setLanguage] = useState("en");
+  const [priority, setPriority] = useState("turbo"); // default
 
+  // Load from localStorage
   useEffect(() => {
     const savedLanguage = localStorage.getItem("language");
+    const savedPriority = localStorage.getItem("priority");
+
     if (savedLanguage) setLanguage(savedLanguage);
+    if (savedPriority) setPriority(savedPriority);
   }, []);
 
   const translations = {
@@ -30,13 +35,26 @@ export function LanguageProvider({ children }) {
     },
   };
 
+  const changePriority = (newPriority) => {
+    localStorage.setItem("priority", newPriority);
+    setPriority(newPriority);
+  };
+
   const changeLanguage = (lang) => {
     localStorage.setItem("language", lang);
     setLanguage(lang);
   };
 
   return (
-    <LanguageContext.Provider value={{ language, changeLanguage, translations }}>
+    <LanguageContext.Provider
+      value={{
+        language,
+        changeLanguage,
+        translations,
+        priority,
+        changePriority,
+      }}
+    >
       {children}
     </LanguageContext.Provider>
   );

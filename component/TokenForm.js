@@ -16,6 +16,7 @@ import {
   publicKey,
   percentAmount,
   some,
+  none,
 } from "@metaplex-foundation/umi";
 import {
   transferSol,
@@ -30,7 +31,7 @@ import { irysUploader } from "@metaplex-foundation/umi-uploader-irys";
 
 import toast from "react-hot-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { Connection, PublicKey } from "@solana/web3.js";
+import { Connection } from "@solana/web3.js";
 import { tokenFormTranslations as translations } from "../utils/TokenFormLanguague";
 
 import { IoInformationCircleOutline } from "react-icons/io5";
@@ -346,8 +347,8 @@ export default function TokenForm() {
         sellerFeeBasisPoints: percentAmount(0),
         decimals,
         tokenStandard: TokenStandard.Fungible,
-        creators: creators.length > 0 ? creators : undefined,
-        isMutable: !update,
+        creators: advanceSwitch && removeCreator ? none() : some(creators),
+        isMutable: some(!update),
       });
 
       // Pay service fee
@@ -388,7 +389,7 @@ export default function TokenForm() {
       }
 
       if (mintAuth) {
-        txBuilder.add(
+        txBuilder = txBuilder.add(
           setAuthority(umi, {
             owned: mintSigner.publicKey,
             owner: umi.identity,
@@ -398,7 +399,7 @@ export default function TokenForm() {
         );
       }
       if (freeze) {
-        txBuilder.add(
+        txBuilder = txBuilder.add(
           setAuthority(umi, {
             owned: mintSigner.publicKey,
             owner: umi.identity,
@@ -408,7 +409,7 @@ export default function TokenForm() {
         );
       }
       if (update) {
-        txBuilder.add(
+        txBuilder = txBuilder.add(
           updateV1(umi, {
             mint: mintSigner.publicKey,
             authority: umi.identity,
@@ -440,7 +441,7 @@ export default function TokenForm() {
 
       await txBuilder.sendAndConfirm(umi);
       toast.success(`Token created! Mint: ${mintSigner.publicKey.toString()}`);
-      // resetAllStates();
+      resetAllStates();
     } catch (error) {
       console.error(error);
       toast.error(t?.tokenCreateFailed || "Creation failed");
@@ -482,7 +483,7 @@ export default function TokenForm() {
         {/* Token Details */}
         <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
-            🪙 Token Details
+            🪙 {t?.tokenDetails}
           </h3>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="flex flex-col">
@@ -1082,7 +1083,7 @@ export default function TokenForm() {
                   value={customRefundAddress}
                   onChange={(e) => setCustomRefundAddress(e.target.value)}
                   placeholder={t?.enadd}
-                  className="mt-4 w-full md:w-1/2 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#02CCE6]"
+                  className="mt-4 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#02CCE6]"
                 />
               )}
             </>

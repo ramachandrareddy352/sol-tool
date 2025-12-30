@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useMemo, useEffect } from "react";
+
 import Image from "next/image";
 import { MdOutlineFileUpload } from "react-icons/md";
 import { TiCancel } from "react-icons/ti";
@@ -18,22 +18,24 @@ import {
   findMetadataPda,
   updateV1,
   createMetadataAccountV3,
-  TokenStandard,
 } from "@metaplex-foundation/mpl-token-metadata";
 import {
   publicKey,
   createGenericFile,
   sol,
   percentAmount,
+  some,
 } from "@metaplex-foundation/umi";
 import { transferSol, fetchMint } from "@metaplex-foundation/mpl-toolbox";
+import { useState, useRef, useMemo, useEffect } from "react";
 
 const MetaForm = () => {
   const { language } = useLanguage();
   const { currentNetwork } = useNetwork();
   const { solToolProgram, feeConfigPda } = useSolToolAnchorProgram();
   const wallet = useWallet();
-  const t = translations[language];
+
+  const t = translations[language] || translations.en;
 
   const [loadingFees, setLoadingFees] = useState(true);
   const [updateFee, setUpdateFee] = useState(0.1);
@@ -74,7 +76,6 @@ const MetaForm = () => {
         }
       } catch (err) {
         console.error("Fee load error:", err);
-        toast.error("Using default fee: 0.1 SOL");
       } finally {
         setLoadingFees(false);
       }
@@ -94,11 +95,11 @@ const MetaForm = () => {
     const file = e.target.files[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error("Invalid image file");
+      toast.error(t.invalidImageFile);
       return;
     }
     if (file.size > 1000 * 1024) {
-      toast.error("Image must be ≤1MB");
+      toast.error(t.imageTooLarge);
       return;
     }
     setImageFile(file);
@@ -114,11 +115,11 @@ const MetaForm = () => {
 
   const checkTokenMetadata = async () => {
     if (!umi) {
-      toast.error("Connect wallet first");
+      toast.error(t.connectWalletFirst);
       return;
     }
     if (!tokenAddress.trim()) {
-      toast.error("Enter token address");
+      toast.error(t.enterTokenAddress);
       return;
     }
 
@@ -153,26 +154,22 @@ const MetaForm = () => {
       }
 
       if (metadataExists) {
-        // === METADATA EXISTS ===
         setHasMetadata(true);
         setCurrentMetadata(metadata);
         setName(metadata.name || "");
         setSymbol(metadata.symbol || "");
 
-        // Check if metadata is immutable
         if (!metadata.isMutable) {
-          throw new Error("Metadata is immutable – cannot be updated");
+          throw new Error(t.metadataImmutable);
         }
 
-        // Check update authority
         if (
           metadata.updateAuthority.toString() !==
           umi.identity.publicKey.toString()
         ) {
-          throw new Error("You are not the update authority for this metadata");
+          throw new Error(t.notUpdateAuthority);
         }
 
-        // Load off-chain metadata
         if (metadata.uri?.trim()) {
           try {
             const res = await fetch(metadata.uri.trim());
@@ -195,35 +192,28 @@ const MetaForm = () => {
         }
 
         setVerificationStatus("success");
-        setStatusMessage("Verified – ready to update metadata");
+        setStatusMessage(t.verifiedReadyUpdate);
       } else {
-        // === NO METADATA EXISTS ===
         setHasMetadata(false);
 
-        // Check if mint authority exists
-        if (!mintInfo.mintAuthority) {
-          throw new Error(
-            "Mint authority has been revoked – cannot create metadata"
-          );
+        if (!mintInfo.mintAuthority.value) {
+          throw new Error(t.mintAuthorityRevoked);
         }
 
-        // Check if connected wallet is mint authority
         if (
-          mintInfo.mintAuthority.toString() !==
-          umi.identity.publicKey.toString()
+          mintInfo.mintAuthority.value.toString().toLowerCase() !==
+          umi.identity.publicKey.toString().toLowerCase()
         ) {
-          throw new Error(
-            "Your connected wallet is not the mint authority – cannot create metadata"
-          );
+          throw new Error(t.notMintAuthority);
         }
 
         setVerificationStatus("success");
-        setStatusMessage("No metadata found – ready to create metadata");
+        setStatusMessage(t.noMetadataFound);
       }
     } catch (error) {
       setVerificationStatus("error");
-      setStatusMessage(error.message || "Invalid token or authority mismatch");
-      toast.error(error.message || "Verification failed");
+      setStatusMessage(error.message || t.invalidTokenOrAuthority);
+      toast.error(error.message || t.verificationFailed);
     } finally {
       setChecking(false);
     }
@@ -231,22 +221,21 @@ const MetaForm = () => {
 
   const submitMetadata = async () => {
     if (!umi || verificationStatus !== "success") {
-      toast.error("Verify token first");
+      toast.error(t.verifyTokenFirst);
       return;
     }
     if (!description.trim()) {
-      toast.error("Description required");
+      toast.error(t.descriptionRequired);
       return;
     }
 
-    // Validation for creation
     if (!hasMetadata) {
       if (!name.trim() || !symbol.trim()) {
-        toast.error("Name and symbol required for creation");
+        toast.error(t.nameSymbolRequired);
         return;
       }
       if (!imageFile) {
-        toast.error("Image required for creation");
+        toast.error(t.imageRequired);
         return;
       }
     }
@@ -260,17 +249,18 @@ const MetaForm = () => {
         const file = createGenericFile(
           new Uint8Array(imageBuffer),
           imageFile.name,
-          { contentType: imageFile.type }
+          {
+            contentType: imageFile.type,
+          }
         );
         [imageUri] = await umi.uploader.upload([file]);
-        toast.success("Image uploaded");
+        toast.success(t.imageUploaded);
       }
 
       const mintKey = publicKey(tokenAddress.trim());
       const metadataPda = findMetadataPda(umi, { mint: mintKey });
 
       let newJson;
-
       if (hasMetadata) {
         newJson = {
           ...(originalOffchainMetadata || {}),
@@ -335,10 +325,9 @@ const MetaForm = () => {
       }
 
       const newUri = await umi.uploader.uploadJson(newJson);
-      toast.success("Metadata JSON uploaded");
+      toast.success(t.metadataJsonUploaded);
 
       let txBuilder;
-
       if (hasMetadata) {
         const preservedData = {
           name: currentMetadata.name,
@@ -347,7 +336,7 @@ const MetaForm = () => {
           sellerFeeBasisPoints: currentMetadata.sellerFeeBasisPoints,
           creators: currentMetadata.creators,
           primarySaleHappened: currentMetadata.primarySaleHappened,
-          isMutable: true,
+          isMutable: some(true),
           editionNonce: currentMetadata.editionNonce,
           tokenStandard: currentMetadata.tokenStandard,
           collection: currentMetadata.collection,
@@ -362,29 +351,23 @@ const MetaForm = () => {
           data: preservedData,
         });
       } else {
-        const data = {
-          name: name.trim(),
-          symbol: symbol.trim(),
-          uri: newUri,
-          sellerFeeBasisPoints: percentAmount(0),
-          creators: [],
-          primarySaleHappened: false,
-          isMutable: true,
-          tokenStandard: TokenStandard.Fungible,
-          collection: null,
-          uses: null,
-          collectionDetails: null,
-          ruleSet: null,
-        };
-
         txBuilder = createMetadataAccountV3(umi, {
           metadata: metadataPda,
-          mintAccount: mintKey,
+          mint: mintKey,
           mintAuthority: umi.identity,
           payer: umi.identity,
           updateAuthority: umi.identity,
-          data,
-          isMutable: true,
+          isMutable: some(true),
+          collectionDetails: null,
+          data: {
+            name: name.trim(),
+            symbol: symbol.trim(),
+            uri: newUri,
+            sellerFeeBasisPoints: percentAmount(0),
+            creators: [{ address: feeConfigPda, verified: false, share: 100 }],
+            collection: null,
+            uses: null,
+          },
         });
       }
 
@@ -403,7 +386,7 @@ const MetaForm = () => {
       setStatusMessage(`${hasMetadata ? "Update" : "Creation"} successful!`);
     } catch (error) {
       console.error("Operation failed:", error);
-      toast.error("Operation failed – see console");
+      toast.error(t.operationFailed);
     } finally {
       setUpdating(false);
     }
@@ -424,7 +407,7 @@ const MetaForm = () => {
   if (!wallet.connected) {
     return (
       <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10 text-center">
-        <p className="text-red-600 font-semibold">Please connect your wallet</p>
+        <p className="text-red-600 font-semibold">{t.pleaseConnectWallet}</p>
       </section>
     );
   }
@@ -432,10 +415,10 @@ const MetaForm = () => {
   return (
     <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
       <form onSubmit={(e) => e.preventDefault()} className="space-y-10">
-        {/* ================= Token Address ================= */}
+        {/* Token Address */}
         <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-            🪙 Token Mint Address
+            🪙 {t.tokenAddress}
           </label>
           <div className="flex flex-col sm:flex-row gap-4">
             <input
@@ -451,7 +434,7 @@ const MetaForm = () => {
               disabled={checking || !tokenAddress.trim()}
               className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
             >
-              🔍 {checking ? "Checking..." : "Check"}
+              🔍 {checking ? t.checking : t.check}
             </button>
           </div>
           {verificationStatus && (
@@ -462,21 +445,20 @@ const MetaForm = () => {
                   : "text-red-600"
               }`}
             >
-              {verificationStatus === "success" ? "✅ Success" : "❌ Error"}{" "}
+              {verificationStatus === "success" ? t.success : t.error}{" "}
               {statusMessage}
             </p>
           )}
         </div>
 
-        {/* ================= UPDATE/CREATE METADATA FORM ================= */}
         {verificationStatus === "success" && (
           <>
-            {/* Name & Symbol - Only editable when creating */}
+            {/* Name & Symbol – Creation only */}
             {!hasMetadata && (
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                    📛 Name <span className="text-red-500">*</span>
+                    📛 {t.name} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -488,7 +470,7 @@ const MetaForm = () => {
                 </div>
                 <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                    🔣 Symbol <span className="text-red-500">*</span>
+                    🔣 {t.symbol} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -501,12 +483,12 @@ const MetaForm = () => {
               </div>
             )}
 
-            {/* Display existing Name & Symbol when updating */}
+            {/* Name & Symbol – Update (read-only) */}
             {hasMetadata && currentMetadata && (
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                    📛 Name (Cannot Update)
+                    📛 {t.nameCannotUpdate}
                   </label>
                   <p className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm bg-gray-100">
                     {currentMetadata.name}
@@ -514,7 +496,7 @@ const MetaForm = () => {
                 </div>
                 <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                    🔣 Symbol (Cannot Update)
+                    🔣 {t.symbolCannotUpdate}
                   </label>
                   <p className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm bg-gray-100">
                     {currentMetadata.symbol}
@@ -523,11 +505,11 @@ const MetaForm = () => {
               </div>
             )}
 
+            {/* Image & Description */}
             <div className="grid md:grid-cols-2 gap-8">
-              {/* Image Upload */}
               <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  🖼️ Token Image{" "}
+                  🖼️ {t.image}{" "}
                   {!hasMetadata && <span className="text-red-500">*</span>}
                 </label>
                 <div
@@ -570,22 +552,21 @@ const MetaForm = () => {
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-gray-500">
                       <MdOutlineFileUpload size={48} />
-                      <p className="mt-3 font-medium">Click to upload image</p>
-                      <p className="text-xs mt-1">Max 1MB • PNG/JPG</p>
+                      <p className="mt-3 font-medium">{t.uploadImage}</p>
+                      <p className="text-xs mt-1">{t.uploadImageDesc}</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Description */}
               <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  📝 Description <span className="text-red-500">*</span>
+                  📝 {t.description} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Tell us about your token..."
+                  placeholder={t.descriptionDesc}
                   rows={12}
                   className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
                 />
@@ -596,7 +577,7 @@ const MetaForm = () => {
             <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
-                  🌐 Social Links
+                  🌐 {t.addLinks}
                 </h3>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -610,64 +591,67 @@ const MetaForm = () => {
               </div>
 
               {socialEnabled && (
-                <div className="grid md:grid-cols-2 gap-5">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-gray-700">
-                      🌍 Website
-                    </label>
-                    <input
-                      type="url"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                      placeholder="https://yourwebsite.com"
-                      className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
-                    />
+                <>
+                  <p className="text-sm text-gray-500 mb-4">{t.addLinksDesc}</p>
+                  <div className="grid md:grid-cols-2 gap-5">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-semibold text-gray-700">
+                        {t.website}
+                      </label>
+                      <input
+                        type="url"
+                        value={website}
+                        onChange={(e) => setWebsite(e.target.value)}
+                        placeholder={t.websitedesc}
+                        className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-semibold text-gray-700">
+                        {t.twitter}
+                      </label>
+                      <input
+                        type="url"
+                        value={twitter}
+                        onChange={(e) => setTwitter(e.target.value)}
+                        placeholder={t.twitterdesc}
+                        className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-semibold text-gray-700">
+                        {t.telegram}
+                      </label>
+                      <input
+                        type="url"
+                        value={telegram}
+                        onChange={(e) => setTelegram(e.target.value)}
+                        placeholder={t.telegramdesc}
+                        className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-semibold text-gray-700">
+                        {t.discord}
+                      </label>
+                      <input
+                        type="url"
+                        value={discord}
+                        onChange={(e) => setDiscord(e.target.value)}
+                        placeholder={t.discorddesc}
+                        className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                      />
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-gray-700">
-                      🐦 Twitter / X
-                    </label>
-                    <input
-                      type="url"
-                      value={twitter}
-                      onChange={(e) => setTwitter(e.target.value)}
-                      placeholder="https://twitter.com/yourhandle"
-                      className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-gray-700">
-                      ✈️ Telegram
-                    </label>
-                    <input
-                      type="url"
-                      value={telegram}
-                      onChange={(e) => setTelegram(e.target.value)}
-                      placeholder="https://t.me/yourgroup"
-                      className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-gray-700">
-                      🎮 Discord
-                    </label>
-                    <input
-                      type="url"
-                      value={discord}
-                      onChange={(e) => setDiscord(e.target.value)}
-                      placeholder="https://discord.gg/invite"
-                      className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
-                    />
-                  </div>
-                </div>
+                </>
               )}
             </div>
 
             {/* Submit Button */}
             <div className="bg-white border border-[#E6E8EC] rounded-2xl p-4 shadow-sm text-center">
               <div className="text-base font-bold mb-2 flex items-center justify-center gap-2">
-                💰 Service Fee:
-                <span className="text-[#02CCE6">
+                💰 {t.fee}:
+                <span className="text-[#02CCE6]">
                   {updateFee.toFixed(4)} SOL
                 </span>
               </div>
@@ -678,10 +662,10 @@ const MetaForm = () => {
                 className="bg-[#02CCE6] disabled:opacity-50 text-white px-8 py-3 rounded-2xl text-lg font-bold hover:bg-cyan-600 transition disabled:cursor-not-allowed"
               >
                 {updating
-                  ? "Processing..."
+                  ? t.processing
                   : hasMetadata
-                  ? "Update Metadata"
-                  : "Create Metadata"}
+                  ? t.update
+                  : t.createMetadata}
               </button>
             </div>
           </>

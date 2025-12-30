@@ -108,8 +108,10 @@ export const tokenFormTranslations = {
       "Failed to create token. Please fill the details correctly.",
     pleaseWait: "Please wait",
     loadingFee: "Loading fee configuration...",
+    tokenDetails: "Token Details",
   },
   ko: {
+    tokenDetails: "토큰 세부 정보",
     pleaseWait: "잠시만 기다려 주세요",
     loadingFee: "수수료 설정을 불러오는 중입니다...",
     connectWalletFirst: "먼저 지갑을 연결해 주세요.",

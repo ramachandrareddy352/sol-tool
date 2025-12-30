@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useLanguage } from "@/app/Context/LanguageContext";
 import { FaTelegramPlane } from "react-icons/fa";
 
 const FeeModal = () => {
-  const { language } = useLanguage();
+  const { language, priority, changePriority } = useLanguage();
 
   const texts = {
     en: {
@@ -32,16 +31,13 @@ const FeeModal = () => {
 
   const t = texts[language];
 
-  // priority state
-  const [priority, setPriority] = useState("turbo"); // default selected
-
   const Option = ({ id, label }) => {
     const active = priority === id;
 
     return (
       <button
         type="button"
-        onClick={() => setPriority(id)}
+        onClick={() => changePriority(id)}
         className={`
           px-4 py-1.5 rounded-xl text-sm font-semibold transition
           ${
@@ -67,7 +63,6 @@ const FeeModal = () => {
         <FaTelegramPlane className="text-[#02CCE6]" />
       </div>
 
-      {/* Priority Switch */}
       <div className="flex justify-between items-center py-2 px-3 border border-[#A3F7FE] bg-[#ECFFFF] rounded-xl">
         <Option id="fast" label={t.fast} />
         <Option id="turbo" label={t.turbo} />
