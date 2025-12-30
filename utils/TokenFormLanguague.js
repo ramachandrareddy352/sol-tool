@@ -106,8 +106,12 @@ export const tokenFormTranslations = {
     invalidRefundAddress: "Invalid custom refund address.",
     tokenCreateFailed:
       "Failed to create token. Please fill the details correctly.",
+    pleaseWait: "Please wait",
+    loadingFee: "Loading fee configuration...",
   },
   ko: {
+    pleaseWait: "잠시만 기다려 주세요",
+    loadingFee: "수수료 설정을 불러오는 중입니다...",
     connectWalletFirst: "먼저 지갑을 연결해 주세요.",
     vanityLengthError: "접두사와 접미사의 총 길이는 8자를 초과할 수 없습니다.",
     vanitySuccess: "바니티 주소가 성공적으로 생성되었습니다!",

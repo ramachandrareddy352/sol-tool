@@ -1,49 +1,80 @@
+"use client";
+
+import { useState } from "react";
 import { useLanguage } from "@/app/Context/LanguageContext";
 import { FaTelegramPlane } from "react-icons/fa";
 
 const FeeModal = () => {
   const { language } = useLanguage();
 
-  // Texts for English and Korean
   const texts = {
     en: {
       title: "Use Priority Fees",
-      description: "Modify the fees you pay within SOL TOOL in order to avoid Transactions error due to Solana congestion.",
+      description:
+        "Modify the fees you pay within SOL TOOL in order to avoid transaction errors due to Solana congestion.",
       priorityLevel: "Priority Level",
       fast: "Fast 1x",
       turbo: "Turbo 2x",
       ultra: "Ultra 3x",
-      note: "Consider that priority fees generally facilitate sending transactions to the network, but their effectiveness is contingent upon the current status of the network.",
+      note: "Priority fees help transactions reach the network faster, but effectiveness depends on current network conditions.",
     },
     ko: {
       title: "우선 요금 사용",
-      description: "Solana 네트워크 혼잡으로 인한 거래 오류를 피하기 위해 SOL TOOL 내에서 지불하는 요금을 수정하십시오.",
+      description:
+        "Solana 네트워크 혼잡으로 인한 거래 오류를 방지하기 위해 SOL TOOL에서 지불하는 수수료를 조정할 수 있습니다.",
       priorityLevel: "우선 순위 수준",
       fast: "빠름 1x",
       turbo: "터보 2x",
       ultra: "초고속 3x",
-      note: "우선 요금은 일반적으로 네트워크에 거래를 보내는 것을 용이하게 하지만, 그 효과는 네트워크의 현재 상태에 따라 달라집니다.",
+      note: "우선 요금은 거래 처리를 빠르게 도와주지만, 실제 효과는 네트워크 상태에 따라 달라질 수 있습니다.",
     },
   };
 
-  const currentText = texts[language];
+  const t = texts[language];
+
+  // priority state
+  const [priority, setPriority] = useState("turbo"); // default selected
+
+  const Option = ({ id, label }) => {
+    const active = priority === id;
+
+    return (
+      <button
+        type="button"
+        onClick={() => setPriority(id)}
+        className={`
+          px-4 py-1.5 rounded-xl text-sm font-semibold transition
+          ${
+            active
+              ? "bg-white border-grad2 text-black"
+              : "text-gray-500 hover:text-black"
+          }
+        `}
+      >
+        {label}
+      </button>
+    );
+  };
 
   return (
-    <section className="flex flex-col gap-2 bg-[#fcfcfd] md:w-[400px] h-auto rounded border z-10 border-[#E6E8EC] p-4 absolute right-0 top-10">
-      <h1 className="text-2xl font-bold">{currentText.title}</h1>
-      <p className="text-sm">{currentText.description}</p>
-      <div className="flex items-center gap-3">
-        <h2 className="font-semibold">{currentText.priorityLevel}</h2>
-        <span>
-          <FaTelegramPlane />
-        </span>
+    <section className="flex flex-col gap-3 bg-[#fcfcfd] md:w-[400px] rounded border border-[#E6E8EC] p-4 absolute right-0 top-10 z-10">
+      <h1 className="text-2xl font-bold">{t.title}</h1>
+
+      <p className="text-sm text-gray-600">{t.description}</p>
+
+      <div className="flex items-center gap-2">
+        <h2 className="font-semibold">{t.priorityLevel}</h2>
+        <FaTelegramPlane className="text-[#02CCE6]" />
       </div>
-      <div className="flex justify-around items-center py-2 px-3 border border-[#A3F7FE] bg-[#ECFFFF] rounded-xl">
-        <span>{currentText.fast}</span>
-        <span className="bg-[#fff] py-1.5 px-4 rounded-xl border-grad2">{currentText.turbo}</span>
-        <span>{currentText.ultra}</span>
+
+      {/* Priority Switch */}
+      <div className="flex justify-between items-center py-2 px-3 border border-[#A3F7FE] bg-[#ECFFFF] rounded-xl">
+        <Option id="fast" label={t.fast} />
+        <Option id="turbo" label={t.turbo} />
+        <Option id="ultra" label={t.ultra} />
       </div>
-      <p className="text-sm">{currentText.note}</p>
+
+      <p className="text-sm text-gray-500">{t.note}</p>
     </section>
   );
 };

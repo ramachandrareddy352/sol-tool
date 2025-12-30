@@ -15,6 +15,7 @@ import {
   createGenericFile,
   publicKey,
   percentAmount,
+  some,
 } from "@metaplex-foundation/umi";
 import {
   transferSol,
@@ -29,13 +30,13 @@ import { irysUploader } from "@metaplex-foundation/umi-uploader-irys";
 
 import toast from "react-hot-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
-
+import { Connection, PublicKey } from "@solana/web3.js";
 import { tokenFormTranslations as translations } from "../utils/TokenFormLanguague";
 
 import { IoInformationCircleOutline } from "react-icons/io5";
 import { LuRefreshCw } from "react-icons/lu";
 import { IoFlashOutline } from "react-icons/io5";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { TiCancel } from "react-icons/ti";
 import { MdOutlineFileUpload } from "react-icons/md";
 import { IoIosInformationCircle } from "react-icons/io";
@@ -44,10 +45,28 @@ import { BsGlobe2 } from "react-icons/bs";
 import { FaRegClock } from "react-icons/fa6";
 
 import { useLanguage } from "@/app/Context/LanguageContext";
+import { useNetwork } from "@/app/Context/NetworkContext";
+import { useSolToolAnchorProgram } from "@/utils/fetch_fee_config";
 
 export default function TokenForm() {
   const wallet = useWallet();
+  const { solToolProgram, feeConfigPda } = useSolToolAnchorProgram();
+  const { language } = useLanguage();
+  const { currentNetwork } = useNetwork();
+  const t = translations[language];
+
   const fileInputRef = useRef(null);
+
+  const [loadingFees, setLoadingFees] = useState(true);
+  const [fees, setFees] = useState({
+    createTokenFee: 0.1,
+    modifyCreatorInfoFee: 0.1,
+    customTokenAddressFee: 0.1,
+    accountDeleteRefundFee: 0.1,
+    revokeMintAuthorityFee: 0.1,
+    revokeFreezeAuthorityFee: 0.1,
+    revokeMetadataAuthorityFee: 0.1,
+  });
 
   const [creatingToken, setCreatingToken] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -87,72 +106,147 @@ export default function TokenForm() {
   const [activeOption, setActiveOption] = useState("owner");
   const [customRefundAddress, setCustomRefundAddress] = useState("");
 
-  const { language } = useLanguage();
+  const resetAllStates = () => {
+    // Image & basic token info
+    setImage(null);
+    setPreviewUrl(null);
+    setName("");
+    setSymbol("");
+    setDecimals(6);
+    setSupply(0);
+    setDescription("");
+
+    // Social links
+    setWebsite("");
+    setTwitter("");
+    setTelegram("");
+    setDiscord("");
+
+    // Switches & authorities
+    setSocialSwitch(true);
+    setAdvanceSwitch(false);
+    setFreeze(false);
+    setMintAuth(true);
+    setUpdate(true);
+    setIsChecked(true);
+    setIsCheck(false);
+    setShowPersonal(false);
+
+    // Creator metadata
+    setCreatorName("");
+    setCreatorWeb("");
+    setCreatorAddress("");
+    setRemoveCreator(false);
+
+    // Vanity mint
+    setPrefix("");
+    setSuffix("");
+    setIsGenerating(false);
+    setGeneratedMint(null);
+
+    // Close account options
+    setDeletion(true);
+    setActiveOption("owner");
+    setCustomRefundAddress("");
+  };
+
+  // Dedicated connection for SPL token queries
+  const connection = useMemo(() => {
+    return new Connection(currentNetwork.rpc, "confirmed");
+  }, [currentNetwork]);
 
   const umi = useMemo(() => {
-    if (!wallet.connected || !wallet.publicKey) return null;
-    return createUmi("https://api.devnet.solana.com")
+    if (!wallet.connected || !wallet.publicKey || !connection) return null;
+    return createUmi(connection.rpcEndpoint)
       .use(walletAdapterIdentity(wallet))
       .use(mplTokenMetadata())
       .use(irysUploader());
-  }, [wallet]);
+  }, [wallet.connected, wallet.publicKey, connection]);
+
+  // Fetch fees from on-chain FeeConfig
+  useEffect(() => {
+    const fetchFees = async () => {
+      if (!solToolProgram) {
+        console.warn("SolTool program not loaded – using defaults");
+        setLoadingFees(false);
+        return;
+      }
+      try {
+        const account = await solToolProgram.account.feeConfig.fetch(
+          feeConfigPda
+        );
+        setFees({
+          createTokenFee: Number(account.createTokenFee) / 1_000_000_000,
+          modifyCreatorInfoFee:
+            Number(account.modifyCreatorInfoFee) / 1_000_000_000,
+          customTokenAddressFee:
+            Number(account.customTokenAddressFee) / 1_000_000_000,
+          accountDeleteRefundFee:
+            Number(account.accountDeleteRefundFee) / 1_000_000_000,
+          revokeMintAuthorityFee:
+            Number(account.revokeMintAuthorityFee) / 1_000_000_000,
+          revokeFreezeAuthorityFee:
+            Number(account.revokeFreezeAuthorityFee) / 1_000_000_000,
+          revokeMetadataAuthorityFee:
+            Number(account.revokeMetadataAuthorityFee) / 1_000_000_000,
+        });
+      } catch (err) {
+        console.error("Fee fetch error:", err);
+        toast.error("Using default fees");
+      } finally {
+        setLoadingFees(false);
+      }
+    };
+    fetchFees();
+  }, [solToolProgram]);
+
+  const totalFee =
+    fees.createTokenFee +
+    (advanceSwitch ? fees.modifyCreatorInfoFee : 0) +
+    (showPersonal ? fees.customTokenAddressFee : 0) +
+    (deletion ? fees.accountDeleteRefundFee : 0) +
+    (mintAuth ? fees.revokeMintAuthorityFee : 0) +
+    (freeze ? fees.revokeFreezeAuthorityFee : 0) +
+    (update ? fees.revokeMetadataAuthorityFee : 0);
 
   const handleImageUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      setImage(file);
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+      if (!file.type.startsWith("image/")) {
+        toast.error("Invalid image file");
+        return;
       }
+      if (file.size > 1024 * 1024) {
+        toast.error("Image ≤1MB");
+        return;
+      }
+      setImage(file);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
-  const handleImageClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleImageClick = () => fileInputRef.current?.click();
 
   const handleRemoveImage = (e) => {
     e.stopPropagation();
     setImage(null);
     setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-  };
-  const handleSocialSwitch = () => {
-    setSocialSwitch((prev) => !prev);
-  };
-  const handleAdvanceSwitch = () => {
-    setAdvanceSwitch((prev) => !prev);
-  };
-  const handleFreeze = () => {
-    setFreeze((prev) => !prev);
-  };
-  const handleMintAuth = () => {
-    setMintAuth((prev) => !prev);
-  };
-  const handleUpdate = () => {
-    setUpdate((prev) => !prev);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const generateVanityAddress = async () => {
     if (!umi || !wallet.connected) {
-      toast.error(translations[language]?.connectWalletFirst);
+      toast.error(t?.connectWalletFirst || "Connect wallet first");
       return;
     }
-
     if (!showPersonal) return;
 
     const prefixStr = isChecked ? prefix.trim() : "";
     const suffixStr = isCheck ? suffix.trim() : "";
 
     if ((prefixStr + suffixStr).length > 8) {
-      toast.error(translations[language]?.vanityLengthError);
+      toast.error(t?.vanityLengthError || "Max 8 characters total");
       return;
     }
 
@@ -162,160 +256,106 @@ export default function TokenForm() {
     try {
       let attempts = 0;
       const maxAttempts = 1_000_000;
-
       while (attempts < maxAttempts) {
         const candidate = generateSigner(umi);
-
         const addr = candidate.publicKey.toString();
-
         if (
           (!prefixStr || addr.startsWith(prefixStr)) &&
           (!suffixStr || addr.endsWith(suffixStr))
         ) {
           setGeneratedMint(candidate);
-          toast.success(translations[language]?.vanitySuccess);
+          toast.success(t?.vanitySuccess || "Vanity address found!");
           return;
         }
-
         attempts++;
-
-        if (attempts % 10_000 === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 0));
-        }
+        if (attempts % 10_000 === 0) await new Promise((r) => setTimeout(r, 0));
       }
-
-      toast.error(translations[language]?.vanityTimeout);
-    } catch (error) {
-      console.error(translations[language]?.vanityGenError + error);
-      toast.error(translations[language]?.vanityFailed);
+      toast.error(t?.vanityTimeout || "Timeout – no match found");
+    } catch (err) {
+      toast.error(t?.vanityFailed || "Generation failed");
     } finally {
       setIsGenerating(false);
     }
   };
 
   const createSPLToken = async () => {
-    if (!wallet.connected || !wallet.publicKey || !umi) {
-      toast.error(translations[language]?.connectWalletFirst);
+    if (!umi || !wallet.connected) {
+      toast.error(t?.connectWalletFirst || "Connect wallet first");
       return;
     }
-    if (!name || !symbol || !image || !description) {
-      toast.error(translations[language]?.fillAllFields);
+    if (!name.trim() || !symbol.trim() || !image || !description.trim()) {
+      toast.error(t?.fillAllFields || "Fill all required fields");
       return;
     }
-
-    const feeAddress = publicKey(
-      "Ezapurmy7RCgNo2F41xSsf6yk5mvtStkoqVQnw9fkaqN"
-    );
 
     setCreatingToken(true);
     try {
-      let mintSigner;
-      if (showPersonal && generatedMint) {
-        mintSigner = generatedMint;
-      } else {
-        mintSigner = generateSigner(umi);
-      }
+      const mintSigner =
+        showPersonal && generatedMint ? generatedMint : generateSigner(umi);
 
       const imageBuffer = await image.arrayBuffer();
       const umiImage = createGenericFile(
         new Uint8Array(imageBuffer),
         image.name || "image.png",
-        { contentType: image.type || "image/png" }
+        {
+          contentType: image.type || "image/png",
+        }
       );
-
       const [imageUri] = await umi.uploader.upload([umiImage]);
 
-      let externalUrl = socialSwitch ? website : "";
-      let attributes = [];
-      let properties = {
-        files: [
-          {
-            uri: imageUri,
-            type: image.type || "image/png",
-          },
-        ],
-        category: "image",
-      };
-      let creators;
-      if (advanceSwitch) {
-        if (removeCreator) {
-          creators = undefined;
-        } else {
-          const finalCreatorName = creatorName || "SolTool";
-          const finalCreatorWeb = creatorWeb || "https://soltool.com";
-          const finalCreatorAddress = creatorAddress;
-          const creatorAddr = publicKey(finalCreatorAddress);
-          creators = [
-            {
-              address: creatorAddr,
-              verified: false,
-              share: 100,
-            },
-          ];
-          attributes.push({
-            trait_type: "Creator",
-            value: finalCreatorName,
-          });
-          if (!socialSwitch) {
-            externalUrl = finalCreatorWeb;
-          }
-        }
-      } else {
-        creators = [
-          {
-            address: publicKey("Ezapurmy7RCgNo2F41xSsf6yk5mvtStkoqVQnw9fkaqN"),
-            verified: false,
-            share: 100,
-          },
-        ];
+      let creators = [];
+      if (advanceSwitch && !removeCreator) {
+        const addr = creatorAddress.trim()
+          ? publicKey(creatorAddress.trim())
+          : umi.identity.publicKey;
+        creators = [{ address: addr, verified: false, share: 100 }];
+      } else if (!advanceSwitch) {
+        creators = [{ address: feeConfigPda, verified: false, share: 100 }];
       }
 
+      let externalUrl = socialSwitch && website.trim() ? website.trim() : "";
+
+      const properties = {
+        files: [{ uri: imageUri, type: image.type || "image/png" }],
+        category: "image",
+      };
       if (socialSwitch) {
-        properties.links = {};
-        if (twitter) {
-          properties.links.twitter = twitter;
-        }
-        if (telegram) {
-          properties.links.telegram = telegram;
-        }
-        if (discord) {
-          properties.links.discord = discord;
-        }
-        if (Object.keys(properties.links).length === 0) {
-          delete properties.links;
-        }
+        const links = {};
+        if (twitter.trim()) links.twitter = twitter.trim();
+        if (telegram.trim()) links.telegram = telegram.trim();
+        if (discord.trim()) links.discord = discord.trim();
+        if (Object.keys(links).length > 0) properties.links = links;
       }
 
       const metadataJson = {
-        name,
-        symbol,
-        description,
+        name: name.trim(),
+        symbol: symbol.trim(),
+        description: description.trim(),
         image: imageUri,
         external_url: externalUrl,
         properties,
-        ...(attributes.length > 0 && { attributes }),
       };
 
       const metadataUri = await umi.uploader.uploadJson(metadataJson);
 
       let txBuilder = createV1(umi, {
         mint: mintSigner,
-        name,
-        symbol,
+        name: name.trim(),
+        symbol: symbol.trim(),
         uri: metadataUri,
-        sellerFeeBasisPoints: percentAmount(100),
+        sellerFeeBasisPoints: percentAmount(0),
         decimals,
         tokenStandard: TokenStandard.Fungible,
-        creators,
-      }).setFeePayer(umi.identity);
+        creators: creators.length > 0 ? creators : undefined,
+        isMutable: !update,
+      });
 
-      const feeAmount = sol(totalFee);
-
+      // Pay service fee
       txBuilder = txBuilder.prepend(
         transferSol(umi, {
-          source: umi.identity,
-          destination: feeAddress,
-          amount: feeAmount,
+          source: umi.identity.publicKey,
+          destination: feeConfigPda,
+          amount: sol(totalFee),
         })
       );
 
@@ -326,40 +366,39 @@ export default function TokenForm() {
           owner: umi.identity.publicKey,
         });
 
-        txBuilder = txBuilder.add(
-          createAssociatedToken(umi, {
-            payer: umi.identity,
-            ata: tokenAccount.publicKey,
-            owner: umi.identity.publicKey,
-            mint: mintSigner.publicKey,
-          })
-        );
-
-        const amount = BigInt(supply) * 10n ** BigInt(decimals);
-
-        txBuilder = txBuilder.add(
-          mintV1(umi, {
-            mint: mintSigner.publicKey,
-            authority: umi.identity,
-            tokenOwner: tokenAccount.publicKey,
-            amount,
-            tokenStandard: TokenStandard.Fungible,
-          })
-        );
+        txBuilder = txBuilder
+          .add(
+            createAssociatedToken(umi, {
+              payer: umi.identity,
+              ata: tokenAccount[0],
+              owner: umi.identity.publicKey,
+              mint: mintSigner.publicKey,
+            })
+          )
+          .add(
+            mintV1(umi, {
+              mint: mintSigner.publicKey,
+              authority: umi.identity,
+              amount: BigInt(supply) * 10n ** BigInt(decimals),
+              tokenOwner: umi.identity.publicKey,
+              token: tokenAccount[0],
+              tokenStandard: TokenStandard.Fungible,
+            })
+          );
       }
 
       if (mintAuth) {
-        txBuilder = txBuilder.add(
+        txBuilder.add(
           setAuthority(umi, {
             owned: mintSigner.publicKey,
-            owner: umi.identity.publicKey,
+            owner: umi.identity,
             authorityType: AuthorityType.MintTokens,
             newAuthority: null,
           })
         );
       }
       if (freeze) {
-        txBuilder = txBuilder.add(
+        txBuilder.add(
           setAuthority(umi, {
             owned: mintSigner.publicKey,
             owner: umi.identity,
@@ -369,147 +408,119 @@ export default function TokenForm() {
         );
       }
       if (update) {
-        const metadataPda = findMetadataPda(umi, {
-          mint: mintSigner.publicKey,
-        });
-        txBuilder = txBuilder.add(
+        txBuilder.add(
           updateV1(umi, {
             mint: mintSigner.publicKey,
-            metadata: metadataPda,
+            authority: umi.identity,
             newUpdateAuthority: null,
-            isMutable: null,
+            isMutable: some(false),
           })
         );
       }
 
-      if (deletion && activeOption && activeOption !== "owner" && supply > 0) {
+      if (deletion && activeOption !== "owner" && supply > 0 && tokenAccount) {
         let closeAuth;
-        if (activeOption === "sol") {
-          closeAuth = feeAddress;
-        } else if (activeOption === "token") {
-          if (!creators || creators.length === 0) {
-            toast.error(translations[language]?.noCloseAuthority);
-            setCreatingToken(false);
-            return;
-          }
+        if (activeOption === "sol") closeAuth = feeConfigPda;
+        else if (activeOption === "token") {
+          if (creators.length === 0)
+            throw new Error("No creator for token refund");
           closeAuth = creators[0].address;
         } else if (activeOption === "custom") {
-          try {
-            closeAuth = publicKey(customRefundAddress.trim());
-          } catch (err) {
-            toast.error(translations[language]?.invalidRefundAddress);
-            setCreatingToken(false);
-            return;
-          }
+          closeAuth = publicKey(customRefundAddress.trim());
         }
-        if (closeAuth) {
-          txBuilder = txBuilder.add(
-            setAuthority(umi, {
-              owned: tokenAccount,
-              owner: umi.identity,
-              authorityType: AuthorityType.CloseAccount,
-              newAuthority: closeAuth,
-            })
-          );
-        }
+        txBuilder.add(
+          setAuthority(umi, {
+            owned: tokenAccount[0],
+            owner: umi.identity,
+            authorityType: AuthorityType.CloseAccount,
+            newAuthority: closeAuth,
+          })
+        );
       }
 
-      const result = await txBuilder.sendAndConfirm(umi);
-      console.log("Transaction result:", result);
-
-      const mintAddress = mintSigner.publicKey.toString();
-      toast.success(
-        `Token created successfully!\nMint address: ${mintAddress}\n\nCheck your wallet for the minted tokens.`
-      );
-
-      setName("");
-      setSymbol("");
-      setDescription("");
-      setImage(null);
-      setPreviewUrl(null);
-      setSupply(0);
-      setDecimals(6);
-      setCreatingToken(false);
+      await txBuilder.sendAndConfirm(umi);
+      toast.success(`Token created! Mint: ${mintSigner.publicKey.toString()}`);
+      // resetAllStates();
     } catch (error) {
       console.error(error);
+      toast.error(t?.tokenCreateFailed || "Creation failed");
+    } finally {
       setCreatingToken(false);
-      toast.error(translations[language]?.tokenCreateFailed);
     }
   };
 
-  const baseFee = 0.2;
-  const extraFees =
-    (advanceSwitch ? 0.1 : 0) +
-    (freeze ? 0.1 : 0) +
-    (mintAuth ? 0.1 : 0) +
-    (update ? 0.1 : 0) +
-    (showPersonal ? 0.1 : 0) +
-    (deletion ? 0.1 : 0);
-  const totalFee = baseFee + extraFees;
+  // Loading screen
+  if (loadingFees) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-[#02CCE6] mx-auto"></div>
+          <p className="mt-6 text-lg font-medium text-gray-700">
+            {translations[language].loadingFee}
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            {translations[language].pleaseWait}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!wallet.connected) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-2xl font-bold text-red-600">
+          Please connect your wallet
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <form onSubmit={handleSubmit} className="mt-8">
-        {/* Token Name, Symbol, Decimals, Supply Input */}
+      <form onSubmit={(e) => e.preventDefault()} className="mt-8">
+        {/* Token Details */}
         <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
             🪙 Token Details
           </h3>
-
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Token Name */}
             <div className="flex flex-col">
-              <TooltipLabel
-                label={translations[language]?.name}
-                tooltip={translations[language]?.nameTooltip}
-                required
-              />
+              <TooltipLabel label={t?.name} tooltip={t?.nameTooltip} required />
               <input
                 type="text"
                 value={name}
                 onChange={(e) => {
-                  const value = e.target.value.trim();
-                  if (value.length > 50) {
-                    toast.error(translations[language]?.nameExceedLengthError);
-                    return;
-                  }
-                  setName(value);
+                  const v = e.target.value.trim();
+                  if (v.length > 50) toast.error(t?.nameExceedLengthError);
+                  else setName(v);
                 }}
-                placeholder={translations[language]?.nameplace}
+                placeholder={t?.nameplace}
                 className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
               />
             </div>
-
-            {/* Token Symbol */}
             <div className="flex flex-col">
               <TooltipLabel
-                label={translations[language]?.symbol}
-                tooltip={translations[language]?.symbolTooltip}
+                label={t?.symbol}
+                tooltip={t?.symbolTooltip}
                 required
               />
               <input
                 type="text"
                 value={symbol}
                 onChange={(e) => {
-                  const value = e.target.value.trim();
-                  if (value.length > 10) {
-                    toast.error(
-                      translations[language]?.symbolExceedLengthError
-                    );
-                    return;
-                  }
-                  setSymbol(value);
+                  const v = e.target.value.trim();
+                  if (v.length > 10) toast.error(t?.symbolExceedLengthError);
+                  else setSymbol(v);
                 }}
-                placeholder={translations[language]?.symbolplace}
+                placeholder={t?.symbolplace}
                 className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
               />
             </div>
-
-            {/* Decimals */}
             <div className="flex flex-col">
               <TooltipLabel
-                label={translations[language]?.decimals}
-                tooltip={translations[language]?.decimalTooltip}
+                label={t?.decimals}
+                tooltip={t?.decimalTooltip}
                 required
               />
               <input
@@ -518,62 +529,45 @@ export default function TokenForm() {
                 min={1}
                 max={12}
                 onChange={(e) => {
-                  const value = Number(e.target.value);
-                  if (value === 0 || value > 12) {
-                    toast.error(translations[language]?.decimalError);
-                    return;
-                  }
-                  setDecimals(value);
+                  const v = Number(e.target.value);
+                  if (v < 1 || v > 12) toast.error(t?.decimalError);
+                  else setDecimals(v);
                 }}
                 className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {translations[language]?.decimaldesc}
-              </p>
+              <p className="text-xs text-gray-500 mt-1">{t?.decimaldesc}</p>
             </div>
-
-            {/* Supply */}
             <div className="flex flex-col">
-              <TooltipLabel
-                label={translations[language]?.supply}
-                tooltip={translations[language]?.supplyTooltip}
-              />
+              <TooltipLabel label={t?.supply} tooltip={t?.supplyTooltip} />
               <input
                 type="number"
                 value={supply}
-                onChange={(e) => setSupply(Number(e.target.value))}
+                onChange={(e) => setSupply(Number(e.target.value) || 0)}
                 className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {translations[language]?.supplydesc}
-              </p>
+              <p className="text-xs text-gray-500 mt-1">{t?.supplydesc}</p>
             </div>
           </div>
         </div>
 
-        {/* Token Description & Image Input */}
+        {/* Description & Image */}
         <div className="grid md:grid-cols-2 gap-8 mt-8">
-          {/* Description */}
-          <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
+          <div className="bg-white border border-[#E6E8EC] rounded-2xl p-3 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              📝 {translations[language]?.description}
+              📝 {t?.description}
             </h3>
-
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={translations[language]?.descriptionDesc}
+              placeholder={t?.descriptionDesc}
               rows={10}
               className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-[#02CCE6]"
             />
           </div>
-
-          {/* Image */}
-          <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
+          <div className="bg-white border border-[#E6E8EC] rounded-2xl p-3 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              🖼️ {translations[language]?.image}
+              🖼️ {t?.image}
             </h3>
-
             <div
               onClick={handleImageClick}
               onMouseEnter={() => setIsHovering(true)}
@@ -587,12 +581,11 @@ export default function TokenForm() {
                 className="hidden"
                 onChange={handleImageUpload}
               />
-
               {previewUrl ? (
                 <>
                   <Image
                     src={previewUrl}
-                    alt="Token Image"
+                    alt="Token"
                     fill
                     unoptimized
                     className="object-contain"
@@ -606,13 +599,13 @@ export default function TokenForm() {
                         }}
                         className="px-4 py-2 bg-white text-black rounded-lg font-semibold"
                       >
-                        {translations[language]?.Change}
+                        {t?.Change}
                       </button>
                       <button
                         onClick={handleRemoveImage}
                         className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold"
                       >
-                        {translations[language]?.Remove}
+                        {t?.Remove}
                       </button>
                     </div>
                   )}
@@ -620,85 +613,70 @@ export default function TokenForm() {
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <MdOutlineFileUpload size={42} />
-                  <p className="mt-2 text-sm font-medium">
-                    {translations[language]?.uploadImage}
-                  </p>
+                  <p className="mt-2 text-sm font-medium">{t?.uploadImage}</p>
                 </div>
               )}
             </div>
-
-            <p className="text-xs text-gray-500 mt-2">
-              {translations[language]?.uploadImageDesc}
-            </p>
+            <p className="text-xs text-gray-500 mt-2">{t?.uploadImageDesc}</p>
           </div>
         </div>
 
-        {/* Token Metadata Social media links Input */}
+        {/* Social Links */}
         <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 mt-8 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              🌐 {translations[language]?.addLinks}
+              🌐 {t?.addLinks}
             </h3>
-
             <label className="switch">
               <input
                 type="checkbox"
                 checked={socialSwitch}
-                onChange={handleSocialSwitch}
+                onChange={() => setSocialSwitch(!socialSwitch)}
               />
               <span className="slider"></span>
             </label>
           </div>
-
           {socialSwitch && (
             <>
-              <p className="text-sm text-gray-500 mb-4">
-                {translations[language]?.addLinksDesc}
-              </p>
-
+              <p className="text-sm text-gray-500 mb-4">{t?.addLinksDesc}</p>
               <div className="grid md:grid-cols-2 gap-5">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-semibold">🌍 Website</label>
+                  <label className="text-sm font-semibold">Website</label>
                   <input
                     type="url"
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
-                    placeholder={translations[language]?.websitedesc}
+                    placeholder={t?.websitedesc}
                     className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
                   />
                 </div>
-
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-semibold">
-                    🐦 Twitter / X
-                  </label>
+                  <label className="text-sm font-semibold">Twitter / X</label>
                   <input
                     type="url"
                     value={twitter}
                     onChange={(e) => setTwitter(e.target.value)}
-                    placeholder={translations[language]?.twitterdesc}
+                    placeholder={t?.twitterdesc}
                     className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
                   />
                 </div>
-
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-semibold">✈️ Telegram</label>
+                  <label className="text-sm font-semibold">Telegram</label>
                   <input
                     type="url"
                     value={telegram}
                     onChange={(e) => setTelegram(e.target.value)}
-                    placeholder={translations[language]?.telegramdesc}
+                    placeholder={t?.telegramdesc}
                     className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
                   />
                 </div>
-
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-semibold">🎮 Discord</label>
+                  <label className="text-sm font-semibold">Discord</label>
                   <input
                     type="url"
                     value={discord}
                     onChange={(e) => setDiscord(e.target.value)}
-                    placeholder={translations[language]?.discorddesc}
+                    placeholder={t?.discorddesc}
                     className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
                   />
                 </div>
@@ -707,114 +685,88 @@ export default function TokenForm() {
           )}
         </div>
 
-        {/* Advances options */}
-        {/* ================= ADVANCED OPTIONS ================= */}
+        {/* Advanced Options – Modify Creator */}
         <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm my-8">
-          {/* Header */}
           <h2 className="text-xl font-bold flex items-center gap-2 mb-6 gradient-text2">
             ⚙️ {translations[language]?.advancedOptions}
           </h2>
-
-          {/* ================= MODIFY CREATOR ================= */}
           <div className="border border-[#E6E8EC] rounded-xl p-5 bg-[#FCFCFD]">
-            {/* Title + Toggle */}
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-[16px] text-gray-800">
-                  👤 {translations[language]?.modifyCreator}
+                  👤 {t?.modifyCreator}
                 </h3>
-
                 <div className="relative group">
                   <IoIosInformationCircle className="text-gray-400 cursor-pointer" />
-                  <div
-                    className="
-              absolute left-1/2 -translate-x-1/2 top-full mt-2
-              hidden group-hover:block
-              w-64 text-xs text-white
-              bg-black/80 px-3 py-2 rounded-lg
-              shadow-lg z-50
-            "
-                  >
-                    {translations[language]?.modifyCreatorDesc}
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:block w-64 text-xs text-white bg-black/80 px-3 py-2 rounded-lg shadow-lg z-50">
+                    {t?.modifyCreatorDesc}
                   </div>
                 </div>
               </div>
-
               <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-600">
-                  +0.1 SOL
+                <span className="text-sm font-semibold text-[#02CCE6]">
+                  +{fees.modifyCreatorInfoFee} SOL
                 </span>
                 <label className="switch">
                   <input
                     type="checkbox"
                     checked={advanceSwitch}
-                    onChange={handleAdvanceSwitch}
+                    onChange={() => setAdvanceSwitch(!advanceSwitch)}
                   />
                   <span className="slider"></span>
                 </label>
               </div>
             </div>
-
-            {/* ================= CREATOR FORM ================= */}
             {advanceSwitch && (
               <div className="mt-6 flex flex-col gap-5">
-                <p className="text-sm text-gray-500">
-                  {translations[language]?.modifyCreatorDesc}
-                </p>
-
-                {/* Creator Name & Website */}
+                <p className="text-sm text-gray-500">{t?.modifyCreatorDesc}</p>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-semibold text-gray-700">
-                      🏷️ {translations[language]?.creatorName}
+                      🏷️ {t?.creatorName}
                     </label>
                     <input
                       type="text"
                       value={creatorName}
                       disabled={removeCreator}
                       onChange={(e) => setCreatorName(e.target.value)}
-                      placeholder={translations[language]?.createNamePlace}
-                      className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]
-                ${removeCreator ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
-              `}
+                      placeholder={t?.createNamePlace}
+                      className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
+                        removeCreator ? "bg-gray-200 cursor-not-allowed" : ""
+                      }`}
                     />
                   </div>
-
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-semibold text-gray-700">
-                      🌐 {translations[language]?.creatorWeb}
+                      🌐 {t?.creatorWeb}
                     </label>
                     <input
                       type="url"
                       value={creatorWeb}
                       disabled={removeCreator}
                       onChange={(e) => setCreatorWeb(e.target.value)}
-                      placeholder={translations[language]?.createWebPlace}
-                      className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]
-                ${removeCreator ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
-              `}
+                      placeholder={t?.createWebPlace}
+                      className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
+                        removeCreator ? "bg-gray-200 cursor-not-allowed" : ""
+                      }`}
                     />
                   </div>
                 </div>
-
-                {/* Creator Address */}
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-semibold text-gray-700">
-                    🔑 {translations[language]?.creatorAddress}
+                    🔑 {t?.creatorAddress}
                   </label>
                   <input
                     type="text"
                     value={creatorAddress}
                     disabled={removeCreator}
                     onChange={(e) => setCreatorAddress(e.target.value)}
-                    placeholder={translations[language]?.enterAddress}
-                    className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]
-              ${removeCreator ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
-            `}
+                    placeholder={t?.enterAddress}
+                    className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
+                      removeCreator ? "bg-gray-200 cursor-not-allowed" : ""
+                    }`}
                   />
                 </div>
-
-                {/* Remove Creator */}
                 <div className="flex items-center gap-4 pt-2">
                   <label className="switch">
                     <input
@@ -824,26 +776,16 @@ export default function TokenForm() {
                     />
                     <span className="slider"></span>
                   </label>
-
                   <span className="text-sm font-semibold text-gray-700">
-                    {translations[language]?.removeOption}
+                    {t?.removeOption}
                   </span>
-
                   <div className="relative group">
                     <IoInformationCircleOutline
                       size={18}
                       className="text-gray-400 cursor-pointer"
                     />
-                    <div
-                      className="
-                absolute left-1/2 -translate-x-1/2 top-full mt-2
-                hidden group-hover:block
-                w-64 text-xs text-white
-                bg-black/80 px-3 py-2 rounded-lg
-                shadow-lg z-50
-              "
-                    >
-                      {translations[language]?.removeCreatorTooltip}
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:block w-64 text-xs text-white bg-black/80 px-3 py-2 rounded-lg shadow-lg z-50">
+                      {t?.removeCreatorTooltip}
                     </div>
                   </div>
                 </div>
@@ -852,30 +794,27 @@ export default function TokenForm() {
           </div>
         </div>
 
-        {/* ================= REVOKE AUTHORITIES ================= */}
+        {/* Revoke Authorities */}
         <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm my-8">
           <h2 className="text-xl font-bold flex items-center gap-2 mb-1">
-            🔒 {translations[language]?.revokeAuthorities}
+            🔒 {t?.revokeAuthorities}
           </h2>
           <p className="text-sm text-gray-500 mb-6">
-            {translations[language]?.revokeAuthoritiesDesc}
+            {t?.revokeAuthoritiesDesc}
           </p>
-
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Freeze Authority */}
             <div
               className={`relative rounded-xl border-2 p-4 bg-[#FCFCFD] transition ${
                 freeze ? "border-grad" : "border-[#E6E8EC]"
               }`}
             >
-              <div className="flex gap-3 items-start">
+              <div className="flex items-start">
                 <div className="icon-grad">
                   <FaRegSnowflake
                     size={20}
                     color={freeze ? "#00b5cd" : "#777"}
                   />
                 </div>
-
                 <div className="flex-1 text-sm">
                   <div className="flex justify-between items-center">
                     <span
@@ -883,38 +822,34 @@ export default function TokenForm() {
                         freeze ? "gradient-text2" : ""
                       }`}
                     >
-                      {translations[language]?.revokeFreeze}
+                      {t?.revokeFreeze}
                     </span>
-
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-semibold">+0.1 SOL</span>
+                      <span className="text-xs font-semibold text-[#02CCE6]">
+                        +{fees.revokeFreezeAuthorityFee} SOL
+                      </span>
                       <label className="switch-2">
                         <input
                           type="checkbox"
                           checked={freeze}
-                          onChange={handleFreeze}
+                          onChange={() => setFreeze(!freeze)}
                         />
                         <span className="slider"></span>
                       </label>
                     </div>
                   </div>
-
-                  <p className="text-[#777E90] mt-1">
-                    {translations[language]?.revokeFreezeDesc}
-                  </p>
+                  <p className="text-[#777E90] mt-1">{t?.revokeFreezeDesc}</p>
                 </div>
               </div>
             </div>
 
-            {/* Mint Authority */}
             <div
               className={`relative rounded-xl border-2 p-4 bg-[#FCFCFD] transition ${
                 mintAuth ? "border-grad" : "border-[#E6E8EC]"
               }`}
             >
-              <div className="flex gap-3 items-start">
+              <div className="flex items-start">
                 <TiCancel size={22} color={mintAuth ? "#00b5cd" : "#777"} />
-
                 <div className="flex-1 text-sm">
                   <div className="flex justify-between items-center">
                     <span
@@ -922,38 +857,34 @@ export default function TokenForm() {
                         mintAuth ? "gradient-text2" : ""
                       }`}
                     >
-                      {translations[language]?.revokeMint}
+                      {t?.revokeMint}
                     </span>
-
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-semibold">+0.1 SOL</span>
+                      <span className="text-xs font-semibold text-[#02CCE6]">
+                        +{fees.revokeMintAuthorityFee} SOL
+                      </span>
                       <label className="switch-2">
                         <input
                           type="checkbox"
                           checked={mintAuth}
-                          onChange={handleMintAuth}
+                          onChange={() => setMintAuth(!mintAuth)}
                         />
                         <span className="slider"></span>
                       </label>
                     </div>
                   </div>
-
-                  <p className="text-[#777E90] mt-1">
-                    {translations[language]?.revokeMintDesc}
-                  </p>
+                  <p className="text-[#777E90] mt-1">{t?.revokeMintDesc}</p>
                 </div>
               </div>
             </div>
 
-            {/* Update Authority */}
             <div
               className={`relative rounded-xl border-2 p-4 bg-[#FCFCFD] transition ${
                 update ? "border-grad" : "border-[#E6E8EC]"
               }`}
             >
-              <div className="flex gap-3 items-start">
+              <div className="flex items-start">
                 <FaLock size={18} color={update ? "#00b5cd" : "#777"} />
-
                 <div className="flex-1 text-sm">
                   <div className="flex justify-between items-center">
                     <span
@@ -961,74 +892,62 @@ export default function TokenForm() {
                         update ? "gradient-text2" : ""
                       }`}
                     >
-                      {translations[language]?.revokeUpdate}
+                      {t?.revokeUpdate}
                     </span>
-
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-semibold">+0.1 SOL</span>
+                      <span className="text-xs font-semibold text-[#02CCE6]">
+                        +{fees.revokeMetadataAuthorityFee} SOL
+                      </span>
                       <label className="switch-2">
                         <input
                           type="checkbox"
                           checked={update}
-                          onChange={handleUpdate}
+                          onChange={() => setUpdate(!update)}
                         />
                         <span className="slider"></span>
                       </label>
                     </div>
                   </div>
-
-                  <p className="text-[#777E90] mt-1">
-                    {translations[language]?.revokeUpdateDesc}
-                  </p>
+                  <p className="text-[#777E90] mt-1">{t?.revokeUpdateDesc}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ================= PERSONALIZATION ================= */}
+        {/* Personalization */}
         <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm my-8">
           <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
-            <BsGlobe2 /> {translations[language]?.personalization}
+            <BsGlobe2 /> {t?.personalization}
           </h2>
-
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm">
-                {translations[language]?.claim}
-              </span>
+              <span className="font-semibold text-sm">{t?.claim}</span>
               <IoIosInformationCircle className="text-gray-400" />
             </div>
-
             <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold">+0.1 SOL</span>
+              <span className="text-sm font-semibold text-[#02CCE6]">
+                +{fees.customTokenAddressFee} SOL
+              </span>
               <label className="switch">
                 <input
                   type="checkbox"
                   checked={showPersonal}
-                  onChange={() => setShowPersonal((prev) => !prev)}
+                  onChange={() => setShowPersonal(!showPersonal)}
                 />
                 <span className="slider"></span>
               </label>
             </div>
           </div>
-
-          <p className="text-sm text-gray-600 mt-2">
-            {translations[language]?.personalize}
-          </p>
-
+          <p className="text-sm text-gray-600 mt-2">{t?.personalize}</p>
           {showPersonal && (
             <>
-              {/* Prefix / Suffix */}
               <div className="grid md:grid-cols-2 gap-6 mt-6">
-                {/* Prefix */}
                 <div>
-                  <div className="flex justify-between items-center mb-1">
+                  <div className="flex justify-between items-center mb-1 mx-2">
                     <label className="font-semibold text-sm">
-                      {translations[language]?.prefix}
-                      <span className="text-gray-400 ml-1">
-                        ({translations[language]?.max4})
-                      </span>
+                      {t?.prefix}{" "}
+                      <span className="text-gray-400 ml-1">({t?.max4})</span>
                     </label>
                     <label className="switch-2">
                       <input
@@ -1039,33 +958,24 @@ export default function TokenForm() {
                       <span className="slider"></span>
                     </label>
                   </div>
-
                   <input
                     type="text"
                     value={prefix}
                     disabled={!isChecked}
-                    onChange={(e) => {
-                      if (e.target.value.length > 4) {
-                        toast.error(translations[language]?.maxLength4);
-                        return;
-                      }
-                      setPrefix(e.target.value);
-                    }}
-                    placeholder={translations[language]?.pumpfront}
-                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]
-              ${!isChecked ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
-            `}
+                    onChange={(e) =>
+                      e.target.value.length <= 4 && setPrefix(e.target.value)
+                    }
+                    placeholder={t?.pumpfront}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
+                      !isChecked ? "bg-gray-200 cursor-not-allowed" : ""
+                    }`}
                   />
                 </div>
-
-                {/* Suffix */}
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="font-semibold text-sm">
-                      {translations[language]?.suffix}
-                      <span className="text-gray-400 ml-1">
-                        ({translations[language]?.max4})
-                      </span>
+                      {t?.suffix}{" "}
+                      <span className="text-gray-400 ml-1">({t?.max4})</span>
                     </label>
                     <label className="switch-2">
                       <input
@@ -1076,85 +986,68 @@ export default function TokenForm() {
                       <span className="slider"></span>
                     </label>
                   </div>
-
                   <input
                     type="text"
                     value={suffix}
                     disabled={!isCheck}
-                    onChange={(e) => {
-                      if (e.target.value.length > 4) {
-                        toast.error(translations[language]?.maxLength4);
-                        return;
-                      }
-                      setSuffix(e.target.value);
-                    }}
-                    placeholder={translations[language]?.pump}
-                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]
-              ${!isCheck ? "bg-gray-200 cursor-not-allowed" : "bg-white"}
-            `}
+                    onChange={(e) =>
+                      e.target.value.length <= 4 && setSuffix(e.target.value)
+                    }
+                    placeholder={t?.pump}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
+                      !isCheck ? "bg-gray-200 cursor-not-allowed" : ""
+                    }`}
                   />
                 </div>
               </div>
-
-              {/* Generate */}
               <div className="flex justify-between items-center mt-6 border rounded-2xl p-4">
                 <div className="flex items-center gap-2 font-semibold">
-                  <IoFlashOutline /> {translations[language]?.addGen}
+                  <IoFlashOutline /> {t?.addGen}
                 </div>
                 <div
                   className="flex items-center gap-2 text-[#00c8f8] cursor-pointer"
                   onClick={generateVanityAddress}
                 >
                   <LuRefreshCw className={isGenerating ? "animate-spin" : ""} />
-                  {isGenerating
-                    ? translations[language]?.generating
-                    : translations[language]?.gend}
+                  {isGenerating ? t?.generating : t?.gend}
                 </div>
               </div>
-
               {generatedMint && (
                 <div className="bg-green-100 mt-4 p-3 rounded-xl text-sm max-h-24 overflow-y-auto">
-                  <strong className="block mb-1">
-                    {translations[language]?.generatedAddress}
-                  </strong>
+                  <strong className="block mb-1">{t?.generatedAddress}</strong>
                   <span className="break-all">
                     {generatedMint.publicKey.toString()}
                   </span>
                 </div>
               )}
-
               <div className="bg-[#fff9df] mt-4 p-3 rounded-xl flex gap-2 items-center text-sm">
-                <FaRegClock /> {translations[language]?.paraprocess}
+                <FaRegClock /> {t?.paraprocess}
               </div>
             </>
           )}
         </div>
 
-        {/* ================= ACCOUNT DELETION ================= */}
+        {/* Account Deletion */}
         <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm my-8">
           <div className="flex justify-between items-center mb-2">
-            <h2 className="text-xl font-bold">
-              🗑️ {translations[language].accdel}
-            </h2>
+            <h2 className="text-xl font-bold">🗑️ {t?.accdel}</h2>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold">0.1 SOL</span>
+              <span className="text-sm font-semibold text-[#02CCE6]">
+                +{fees.accountDeleteRefundFee} SOL
+              </span>
               <label className="switch">
                 <input
                   type="checkbox"
                   checked={deletion}
-                  onChange={() => setDeletion((prev) => !prev)}
+                  onChange={() => setDeletion(!deletion)}
                 />
                 <span className="slider"></span>
               </label>
             </div>
           </div>
-
           {deletion && (
             <>
-              <p className="text-sm text-gray-600 mb-4">
-                {translations[language].accdesc}
-              </p>
-
+              <p className="text-sm text-gray-600 mb-4">{t?.accdesc}</p>
               <div className="grid md:grid-cols-4 gap-4">
                 {["sol", "token", "owner", "custom"].map((opt) => (
                   <div
@@ -1162,17 +1055,13 @@ export default function TokenForm() {
                     className="flex items-center justify-between border rounded-xl p-3"
                   >
                     <span className="text-sm font-semibold">
-                      {
-                        translations[language][
-                          opt === "sol"
-                            ? "soltool"
-                            : opt === "token"
-                            ? "tokenCreator"
-                            : opt === "owner"
-                            ? "accOwner"
-                            : "customAddress"
-                        ]
-                      }
+                      {opt === "sol"
+                        ? t?.soltool
+                        : opt === "token"
+                        ? t?.tokenCreator
+                        : opt === "owner"
+                        ? t?.accOwner
+                        : t?.customAddress}
                     </span>
                     <label className="switch-2">
                       <input
@@ -1187,13 +1076,12 @@ export default function TokenForm() {
                   </div>
                 ))}
               </div>
-
               {activeOption === "custom" && (
                 <input
                   type="text"
                   value={customRefundAddress}
                   onChange={(e) => setCustomRefundAddress(e.target.value)}
-                  placeholder={translations[language].enadd}
+                  placeholder={t?.enadd}
                   className="mt-4 w-full md:w-1/2 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#02CCE6]"
                 />
               )}
@@ -1201,25 +1089,23 @@ export default function TokenForm() {
           )}
         </div>
 
+        {/* Submit */}
         <div className="text-center my-10">
           <p className="text-sm mb-2">
-            {translations[language]?.totalFees}{" "}
-            <span className="text-[#02CCE6] font-bold">
-              {totalFee.toFixed(2)} SOL
+            {t?.totalFees}{" "}
+            <span className="text-[#02CCE6] font-bold text-xl">
+              {totalFee.toFixed(4)} SOL
             </span>
           </p>
-
           <button
             type="button"
             onClick={createSPLToken}
             disabled={
-              !wallet.connected || !name || !symbol || !image || !description
+              creatingToken || !name || !symbol || !image || !description
             }
-            className="bg-[#02CCE6] px-8 py-3 rounded-xl text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-600 transition"
+            className="bg-[#02CCE6] px-10 py-4 rounded-2xl text-white text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-600 transition"
           >
-            {creatingToken
-              ? translations[language]?.tokenCreating
-              : translations[language]?.createToken}
+            {creatingToken ? t?.tokenCreating : t?.createToken}
           </button>
         </div>
       </form>
@@ -1231,26 +1117,14 @@ function TooltipLabel({ label, tooltip, required = false }) {
   return (
     <label className="flex items-center gap-1 text-black mb-1">
       {required && <sup className="text-red-500 font-bold">*</sup>}
-
       <span>{label}</span>
-
       {tooltip && (
         <div className="relative group">
           <IoInformationCircleOutline
             size={18}
             className="text-gray-400 cursor-pointer"
           />
-
-          {/* Tooltip */}
-          <div
-            className="
-              absolute left-1/2 -translate-x-1/2 top-full mt-2
-              hidden group-hover:block
-              w-64 text-xs text-white
-              bg-black/80 px-3 py-2 rounded-lg
-              shadow-lg z-50
-            "
-          >
+          <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:block w-64 text-xs text-white bg-black/80 px-3 py-2 rounded-lg shadow-lg z-50">
             {tooltip}
           </div>
         </div>

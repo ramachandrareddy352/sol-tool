@@ -27,7 +27,7 @@ const FreezeForm = () => {
   const wallet = useWallet();
 
   const [loadingFees, setLoadingFees] = useState(true);
-  const [fees, setFees] = useState({ freezeFee: 0, unfreezeFee: 0 }); // In SOL
+  const [fees, setFees] = useState({ freezeFee: 0.1, unfreezeFee: 0.1 }); // In SOL
 
   const t = {
     en: {
@@ -59,8 +59,10 @@ const FreezeForm = () => {
       connectWallet: "Please connect your wallet",
       pleaseWait: "Please wait",
       loadingFee: "Loading fee configuration...",
+      FailStatus: "Failed to check status",
     },
     ko: {
+      FailStatus: "상태를 확인하지 못했습니다",
       pleaseWait: "잠시만 기다려 주세요",
       loadingFee: "수수료 설정을 불러오는 중입니다...",
       tokenAddress: "토큰 주소:",
@@ -301,9 +303,9 @@ const FreezeForm = () => {
       if (error.message.includes("Account does not exist")) {
         setStatusMessage(t.noTokenAccount);
       } else {
-        setStatusMessage(t.errorCheck || "Failed to check status");
+        setStatusMessage(t.errorCheck || t.FailStatus);
       }
-      toast.error(t.errorCheck || "Failed to check status");
+      toast.error(t.errorCheck || t.FailStatus);
     } finally {
       setCheckingStatus(false);
     }
@@ -456,7 +458,7 @@ const FreezeForm = () => {
                   {statusMessage && (
                     <p
                       className={`mt-4 text-sm font-semibold ${
-                        isFrozenStatus === true
+                        !isFrozenStatus || isFrozenStatus === true
                           ? "text-red-600"
                           : "text-green-600"
                       }`}

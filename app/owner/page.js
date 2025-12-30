@@ -34,13 +34,16 @@ const Page = () => {
   const { language } = useLanguage();
   const { currentNetwork } = useNetwork();
   const { solToolProgram, feeConfigPda } = useSolToolAnchorProgram();
-  const [fees, setFees] = useState(null);
+  const [fees, setFees] = useState(0.1);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchFeeConfig = async () => {
       if (solToolProgram) {
+        setLoading(true);
         const data = await solToolProgram.account.feeConfig.fetch(feeConfigPda);
         setFees(data);
+        setLoading(false);
       }
     };
     fetchFeeConfig();
@@ -89,8 +92,14 @@ const Page = () => {
         "Invalid public key format. Must be a valid Solana address (32-44 characters, base58).",
       pleaseWait: "Please wait",
       loadingFee: "Loading fee configuration...",
+      MetaImmutableError:
+        "Metadata is immutable — cannot modify update authority",
+      AddrError: "Please enter a valid address",
     },
     ko: {
+      AddrError: "유효한 주소를 입력해 주세요",
+      MetaImmutableError:
+        "메타데이터가 변경 불가능하여 업데이트 권한을 수정할 수 없습니다",
       pleaseWait: "잠시만 기다려 주세요",
       loadingFee: "수수료 설정을 불러오는 중입니다...",
       priorityFees: "소유권",
@@ -259,11 +268,11 @@ const Page = () => {
 
     // Extra safety: cannot update/revoke if metadata is immutable
     if (type === "update" && !isMutable) {
-      toast.error("Metadata is immutable — cannot modify update authority");
+      toast.error(t.MetaImmutableError);
       return;
     }
     if (newAuth && !newAuth.trim()) {
-      toast.error("Please enter a valid new address");
+      toast.error(t.AddrError);
       return;
     }
 
@@ -420,7 +429,7 @@ const Page = () => {
                   type="button"
                   onClick={() => updateAuthorityFun(type, newAuthState)}
                   disabled={updating || !newAuthState.trim()}
-                  className="w-full sm:w-auto bg-[#02CCE6] hover:bg-cyan-600 text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="w-full sm:w-auto bg-[#02CCE6] hover:bg-cyan-600 text-white px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   {updating ? t.updating : updateLabel}
                 </button>
@@ -455,7 +464,7 @@ const Page = () => {
       <Banner />
       <Headline translations={{ [language]: t }} />
 
-      {!fees ? (
+      {loading ? (
         <LoadingPage />
       ) : (
         <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10">

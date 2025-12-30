@@ -28,7 +28,7 @@ const MinForm = () => {
   const wallet = useWallet();
 
   const [loadingFees, setLoadingFees] = useState(true);
-  const [fees, setFees] = useState({ mintFee: 0, burnFee: 0 }); // In SOL
+  const [fees, setFees] = useState({ mintFee: 0.1, burnFee: 0.1 }); // In SOL
 
   const t = {
     en: {
@@ -337,7 +337,12 @@ const MinForm = () => {
         BigInt(Number(amountMint) * 10 ** decimals)
       );
 
-      const tx = new Transaction().add(feeTransferInstr).add(mintInstr);
+      let tx = new Transaction().add(feeTransferInstr).add(mintInstr);
+      const { blockhash, lastValidBlockHeight } =
+        await connection.getLatestBlockhash("confirmed");
+
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = wallet.publicKey;
 
       const signature = await wallet.sendTransaction(tx, connection);
       await connection.confirmTransaction(signature, "confirmed");
@@ -379,7 +384,7 @@ const MinForm = () => {
     setUpdatingBurn(true);
 
     try {
-      const mintPubkey = new PublicKey(tokenAddress);
+      const mintPubkey = new PublicKey();
       const userATA = await getAssociatedTokenAddress(
         mintPubkey,
         wallet.publicKey
@@ -401,7 +406,12 @@ const MinForm = () => {
         BigInt(Number(amountBurn) * 10 ** decimals)
       );
 
-      const tx = new Transaction().add(feeTransferInstr).add(burnInstr);
+      let tx = new Transaction().add(feeTransferInstr).add(burnInstr);
+      const { blockhash, lastValidBlockHeight } =
+        await connection.getLatestBlockhash("confirmed");
+
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = wallet.publicKey;
 
       const signature = await wallet.sendTransaction(tx, connection);
       await connection.confirmTransaction(signature, "confirmed");
@@ -458,7 +468,7 @@ const MinForm = () => {
               type="button"
               onClick={checkToken}
               disabled={checking || !tokenAddress.trim()}
-              className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition"
+              className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
             >
               🔍 {checking ? t.checking : t.check}
             </button>
@@ -529,7 +539,7 @@ const MinForm = () => {
                       !userAddressMint.trim() ||
                       !amountMint.trim()
                     }
-                    className="w-full bg-[#02CCE6] text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition"
+                    className="w-full bg-[#02CCE6] text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
                   >
                     🪙 {updatingMint ? t.minting : t.mint}
                   </button>
@@ -575,7 +585,7 @@ const MinForm = () => {
                 disabled={
                   updatingBurn || !amountBurn.trim() || userBalance <= 0
                 }
-                className="w-full bg-[#02CCE6] text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition"
+                className="w-full bg-[#02CCE6] text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
               >
                 🔥 {updatingBurn ? t.burning : t.burn}
               </button>
