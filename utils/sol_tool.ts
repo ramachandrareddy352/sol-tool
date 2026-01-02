@@ -14,6 +14,55 @@ export type SolTool = {
     },
     "instructions": [
         {
+            "name": "changeOwner",
+            "discriminator": [
+                109,
+                40,
+                40,
+                90,
+                224,
+                120,
+                193,
+                184
+            ],
+            "accounts": [
+                {
+                    "name": "currentOwner",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "feeConfig",
+                    "writable": true,
+                    "pda": {
+                        "seeds": [
+                            {
+                                "kind": "const",
+                                "value": [
+                                    102,
+                                    101,
+                                    101,
+                                    95,
+                                    99,
+                                    111,
+                                    110,
+                                    102,
+                                    105,
+                                    103
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ],
+            "args": [
+                {
+                    "name": "newOwner",
+                    "type": "pubkey"
+                }
+            ]
+        },
+        {
             "name": "initializeFeeConfig",
             "discriminator": [
                 62,

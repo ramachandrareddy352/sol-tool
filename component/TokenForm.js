@@ -3,7 +3,6 @@
 import Image from "next/image";
 import {
   createV1,
-  findMetadataPda,
   mplTokenMetadata,
   mintV1,
   updateV1,
@@ -29,6 +28,9 @@ import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
 import { irysUploader } from "@metaplex-foundation/umi-uploader-irys";
 
+import { Dialog, Transition } from "@headlessui/react";
+import { HiCheckCircle } from "react-icons/hi";
+
 import toast from "react-hot-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
@@ -37,7 +39,7 @@ import { tokenFormTranslations as translations } from "../utils/TokenFormLanguag
 import { IoInformationCircleOutline } from "react-icons/io5";
 import { LuRefreshCw } from "react-icons/lu";
 import { IoFlashOutline } from "react-icons/io5";
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, Fragment } from "react";
 import { TiCancel } from "react-icons/ti";
 import { MdOutlineFileUpload } from "react-icons/md";
 import { IoIosInformationCircle } from "react-icons/io";
@@ -68,6 +70,9 @@ export default function TokenForm() {
     revokeFreezeAuthorityFee: 0.1,
     revokeMetadataAuthorityFee: 0.1,
   });
+
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [createdMintAddress, setCreatedMintAddress] = useState("");
 
   const [creatingToken, setCreatingToken] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -193,7 +198,6 @@ export default function TokenForm() {
         });
       } catch (err) {
         console.error("Fee fetch error:", err);
-        toast.error("Using default fees");
       } finally {
         setLoadingFees(false);
       }
@@ -214,11 +218,11 @@ export default function TokenForm() {
     const file = event.target.files[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        toast.error("Invalid image file");
+        toast.error(t?.invalidImageFile);
         return;
       }
       if (file.size > 1024 * 1024) {
-        toast.error("Image ≤1MB");
+        toast.error(t?.imageTooLarge);
         return;
       }
       setImage(file);
@@ -238,7 +242,7 @@ export default function TokenForm() {
 
   const generateVanityAddress = async () => {
     if (!umi || !wallet.connected) {
-      toast.error(t?.connectWalletFirst || "Connect wallet first");
+      toast.error(t?.connectWalletFirst);
       return;
     }
     if (!showPersonal) return;
@@ -247,7 +251,7 @@ export default function TokenForm() {
     const suffixStr = isCheck ? suffix.trim() : "";
 
     if ((prefixStr + suffixStr).length > 8) {
-      toast.error(t?.vanityLengthError || "Max 8 characters total");
+      toast.error(t?.vanityLengthError);
       return;
     }
 
@@ -265,15 +269,15 @@ export default function TokenForm() {
           (!suffixStr || addr.endsWith(suffixStr))
         ) {
           setGeneratedMint(candidate);
-          toast.success(t?.vanitySuccess || "Vanity address found!");
+          toast.success(t?.vanitySuccess);
           return;
         }
         attempts++;
         if (attempts % 10_000 === 0) await new Promise((r) => setTimeout(r, 0));
       }
-      toast.error(t?.vanityTimeout || "Timeout – no match found");
+      toast.error(t?.vanityTimeout);
     } catch (err) {
-      toast.error(t?.vanityFailed || "Generation failed");
+      toast.error(t?.vanityFailed);
     } finally {
       setIsGenerating(false);
     }
@@ -281,12 +285,25 @@ export default function TokenForm() {
 
   const createSPLToken = async () => {
     if (!umi || !wallet.connected) {
-      toast.error(t?.connectWalletFirst || "Connect wallet first");
+      toast.error(t?.connectWalletFirst);
       return;
     }
     if (!name.trim() || !symbol.trim() || !image || !description.trim()) {
-      toast.error(t?.fillAllFields || "Fill all required fields");
+      toast.error(t?.fillAllFields);
       return;
+    }
+
+    if (advanceSwitch && !removeCreator) {
+      if (!creatorAddress.trim() || !creatorName.trim() || !creatorWeb.trim()) {
+        toast.error(t?.invalidAdvancedCreator);
+        return;
+      }
+      try {
+        publicKey(creatorAddress.trim()); // Will throw if invalid
+      } catch (err) {
+        toast.error(t?.invalidCreatorAddress);
+        return;
+      }
     }
 
     setCreatingToken(true);
@@ -306,9 +323,7 @@ export default function TokenForm() {
 
       let creators = [];
       if (advanceSwitch && !removeCreator) {
-        const addr = creatorAddress.trim()
-          ? publicKey(creatorAddress.trim())
-          : umi.identity.publicKey;
+        const addr = publicKey(creatorAddress.trim());
         creators = [{ address: addr, verified: false, share: 100 }];
       } else if (!advanceSwitch) {
         creators = [{ address: feeConfigPda, verified: false, share: 100 }];
@@ -336,6 +351,17 @@ export default function TokenForm() {
         external_url: externalUrl,
         properties,
       };
+
+      // Add creator object if advanced creator info is enabled and at least one field is filled
+      if (advanceSwitch && !removeCreator) {
+        const creatorInfo = {};
+        if (creatorName.trim()) creatorInfo.name = creatorName.trim();
+        if (creatorWeb.trim()) creatorInfo.website = creatorWeb.trim();
+
+        if (Object.keys(creatorInfo).length > 0) {
+          metadataJson.creator = creatorInfo;
+        }
+      }
 
       const metadataUri = await umi.uploader.uploadJson(metadataJson);
 
@@ -440,11 +466,15 @@ export default function TokenForm() {
       }
 
       await txBuilder.sendAndConfirm(umi);
-      toast.success(`Token created! Mint: ${mintSigner.publicKey.toString()}`);
+
+      const mintAddress = mintSigner.publicKey.toString();
+      setCreatedMintAddress(mintAddress);
+      setSuccessModalOpen(true);
+      toast.success(`Token created! Mint: ${mintAddress}`);
       resetAllStates();
     } catch (error) {
       console.error(error);
-      toast.error(t?.tokenCreateFailed || "Creation failed");
+      toast.error(t?.tokenCreateFailed);
     } finally {
       setCreatingToken(false);
     }
@@ -453,7 +483,7 @@ export default function TokenForm() {
   // Loading screen
   if (loadingFees) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-400px">
         <div className="text-center">
           <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-[#02CCE6] mx-auto"></div>
           <p className="mt-6 text-lg font-medium text-gray-700">
@@ -471,7 +501,7 @@ export default function TokenForm() {
     return (
       <div className="text-center py-20">
         <p className="text-2xl font-bold text-red-600">
-          Please connect your wallet
+          {t?.connectWalletFirst}
         </p>
       </div>
     );
@@ -555,7 +585,8 @@ export default function TokenForm() {
         <div className="grid md:grid-cols-2 gap-8 mt-8">
           <div className="bg-white border border-[#E6E8EC] rounded-2xl p-3 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              📝 {t?.description}
+              📝 {t?.description}{" "}
+              <sup className="text-red-500 font-bold">*</sup>
             </h3>
             <textarea
               value={description}
@@ -568,6 +599,7 @@ export default function TokenForm() {
           <div className="bg-white border border-[#E6E8EC] rounded-2xl p-3 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               🖼️ {t?.image}
+              <sup className="text-red-500 font-bold">*</sup>
             </h3>
             <div
               onClick={handleImageClick}
@@ -1110,6 +1142,94 @@ export default function TokenForm() {
           </button>
         </div>
       </form>
+
+      {/* Success Modal */}
+      <Transition appear show={successModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setSuccessModalOpen(false)}
+        >
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-transparent backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-8 text-left align-middle shadow-xl transition-all">
+                  <div className="flex flex-col items-center">
+                    <HiCheckCircle className="h-16 w-16 text-green-500 mb-4" />
+                    <Dialog.Title
+                      as="h3"
+                      className="text-2xl font-bold text-gray-900 mb-4"
+                    >
+                      {t?.tokenCreated || "Token Created Successfully!"}
+                    </Dialog.Title>
+
+                    <div className="w-full bg-gray-100 rounded-xl p-4 mb-6">
+                      <p className="text-sm text-gray-600 mb-2">
+                        {t?.mintAddress || "Mint Address"}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-mono break-all text-gray-800">
+                          {createdMintAddress}
+                        </p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(createdMintAddress);
+                            toast.success(t?.copied || "Copied to clipboard!");
+                          }}
+                          className="ml-3 px-4 py-2 bg-[#02CCE6] text-white rounded-lg text-sm font-medium hover:bg-cyan-600 transition"
+                        >
+                          {t?.copy || "Copy"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <a
+                      href={
+                        currentNetwork.name === "mainnet"
+                          ? `https://solscan.io/token/${createdMintAddress}`
+                          : `https://solscan.io/token/${createdMintAddress}?cluster=devnet`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#02CCE6] underline text-sm mb-6 hover:text-cyan-700"
+                    >
+                      {t?.viewOnExplorer || "View on Solscan Explorer"} ↗
+                    </a>
+
+                    <button
+                      type="button"
+                      className="px-8 py-3 bg-[#02CCE6] text-white font-bold rounded-xl hover:bg-cyan-600 transition"
+                      onClick={() => setSuccessModalOpen(false)}
+                    >
+                      OK
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   );
 }
