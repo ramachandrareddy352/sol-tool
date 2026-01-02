@@ -61,6 +61,7 @@ export default function TokenForm() {
   const fileInputRef = useRef(null);
 
   const [loadingFees, setLoadingFees] = useState(true);
+  const [creationStep, setCreationStep] = useState(0);
   const [fees, setFees] = useState({
     createTokenFee: 0.1,
     modifyCreatorInfoFee: 0.1,
@@ -109,7 +110,7 @@ export default function TokenForm() {
   const [generatedMint, setGeneratedMint] = useState(null);
 
   const [deletion, setDeletion] = useState(true);
-  const [activeOption, setActiveOption] = useState("owner");
+  const [activeOption, setActiveOption] = useState("sol");
   const [customRefundAddress, setCustomRefundAddress] = useState("");
 
   const resetAllStates = () => {
@@ -307,10 +308,12 @@ export default function TokenForm() {
     }
 
     setCreatingToken(true);
+
     try {
       const mintSigner =
         showPersonal && generatedMint ? generatedMint : generateSigner(umi);
 
+      setCreationStep(1);
       const imageBuffer = await image.arrayBuffer();
       const umiImage = createGenericFile(
         new Uint8Array(imageBuffer),
@@ -320,6 +323,10 @@ export default function TokenForm() {
         }
       );
       const [imageUri] = await umi.uploader.upload([umiImage]);
+      if (imageUri === undefined) {
+        throw new Error("Failed to upload Image");
+      }
+      setCreationStep(2);
 
       let creators = [];
       if (advanceSwitch && !removeCreator) {
@@ -363,8 +370,12 @@ export default function TokenForm() {
         }
       }
 
-      const metadataUri = await umi.uploader.uploadJson(metadataJson);
+      let metadataUri = await umi.uploader.uploadJson(metadataJson);
+      if (metadataUri === undefined) {
+        throw new Error("Failed to upload metadata");
+      }
 
+      setCreationStep(3);
       let txBuilder = createV1(umi, {
         mint: mintSigner,
         name: name.trim(),
@@ -476,6 +487,7 @@ export default function TokenForm() {
       console.error(error);
       toast.error(t?.tokenCreateFailed);
     } finally {
+      setCreationStep(0);
       setCreatingToken(false);
     }
   };
@@ -483,7 +495,7 @@ export default function TokenForm() {
   // Loading screen
   if (loadingFees) {
     return (
-      <div className="flex items-center justify-center min-h-400px">
+      <div className="flex items-center justify-center min-h-400px my-10">
         <div className="text-center">
           <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-[#02CCE6] mx-auto"></div>
           <p className="mt-6 text-lg font-medium text-gray-700">
@@ -497,15 +509,15 @@ export default function TokenForm() {
     );
   }
 
-  if (!wallet.connected) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-2xl font-bold text-red-600">
-          {t?.connectWalletFirst}
-        </p>
-      </div>
-    );
-  }
+  // if (!wallet.connected) {
+  //   return (
+  //     <div className="text-center py-20">
+  //       <p className="text-2xl font-bold text-red-600">
+  //         {t?.connectWalletFirst}
+  //       </p>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -756,7 +768,10 @@ export default function TokenForm() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-semibold text-gray-700">
-                      🏷️ {t?.creatorName}
+                      🏷️ {t?.creatorName}{" "}
+                      {!removeCreator ? (
+                        <sup className="text-red-500 font-bold">*</sup>
+                      ) : null}
                     </label>
                     <input
                       type="text"
@@ -771,7 +786,10 @@ export default function TokenForm() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-semibold text-gray-700">
-                      🌐 {t?.creatorWeb}
+                      🌐 {t?.creatorWeb}{" "}
+                      {!removeCreator ? (
+                        <sup className="text-red-500 font-bold">*</sup>
+                      ) : null}
                     </label>
                     <input
                       type="url"
@@ -787,7 +805,10 @@ export default function TokenForm() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-semibold text-gray-700">
-                    🔑 {t?.creatorAddress}
+                    🔑 {t?.creatorAddress}{" "}
+                    {!removeCreator ? (
+                      <sup className="text-red-500 font-bold">*</sup>
+                    ) : null}
                   </label>
                   <input
                     type="text"
@@ -1140,6 +1161,72 @@ export default function TokenForm() {
           >
             {creatingToken ? t?.tokenCreating : t?.createToken}
           </button>
+        </div>
+
+        {/* Progress Bar - Only show during creation */}
+        <div className="my-10 max-w-4xl mx-auto">
+          {/* Stepper */}
+          <div className="flex items-center justify-between mb-6 relative">
+            {/* Background line */}
+            <div className="absolute top-5 left-0 w-full h-[3px] bg-gray-200 rounded-full" />
+
+            {/* Active progress line */}
+            <div
+              className="absolute top-5 left-0 h-[3px] rounded-full
+                 bg-linear-to-r from-cyan-400 to-[#02CCE6]
+                 transition-all duration-700 ease-out shadow-[0_0_10px_rgba(2,204,230,0.6)]"
+              style={{ width: `${(creationStep / 3) * 100}%` }}
+            />
+
+            {[
+              t?.startStage,
+              t?.uploadImageStage,
+              t?.uploadMetadatStage,
+              t?.confirmTxStage,
+            ].map((label, index) => {
+              const isActive = creationStep === index;
+              const isDone = creationStep > index;
+
+              return (
+                <div
+                  key={label}
+                  className="relative z-10 flex flex-col items-center"
+                >
+                  {/* Step Circle */}
+                  <div
+                    className={`
+              w-10 h-10 rounded-full flex items-center justify-center
+              text-sm font-bold transition-all duration-300
+              ${
+                isDone
+                  ? "bg-[#02CCE6] text-white shadow-lg"
+                  : isActive
+                  ? "bg-white border-2 border-cyan-400 text-cyan-500 scale-110 shadow-md"
+                  : "bg-white border-2 border-gray-300 text-gray-400"
+              }
+            `}
+                  >
+                    {index}
+                  </div>
+
+                  {/* Label */}
+                  <span
+                    className={`mt-2 text-[11px] sm:text-xs text-center transition-colors
+              ${
+                isDone
+                  ? "text-[#02CCE6] font-medium"
+                  : isActive
+                  ? "text-cyan-600 font-semibold"
+                  : "text-gray-400"
+              }
+            `}
+                  >
+                    {label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </form>
 

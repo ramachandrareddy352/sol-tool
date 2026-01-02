@@ -325,10 +325,6 @@ const FreezeForm = () => {
     <>
       {loadingFees ? (
         <LoadingPage />
-      ) : !wallet.connected ? (
-        <section className="max-w-3xl mx-auto p-6 text-center">
-          <p className="text-red-600 font-semibold">{t.connectWallet}</p>
-        </section>
       ) : (
         <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
           <form onSubmit={(e) => e.preventDefault()} className="space-y-10">

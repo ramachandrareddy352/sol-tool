@@ -7,8 +7,8 @@ import { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
-import { FaBars } from "react-icons/fa6";
 import { FaTelegram } from "react-icons/fa";
+import { FaBars } from "react-icons/fa6";
 import { SlGlobe } from "react-icons/sl";
 
 import { useLanguage } from "@/app/Context/LanguageContext";
@@ -106,6 +106,10 @@ const Header = () => {
       </nav>
 
       <div className="flex gap-3 md:gap-5 items-center">
+        <Link href="/development">
+          <FaTelegram size={25} />
+        </Link>
+
         <div className="relative">
           <SlGlobe
             className="text-xl cursor-pointer"
@@ -134,7 +138,7 @@ const Header = () => {
         <div className="relative">
           <button
             onClick={handleNetworkToggle}
-            className={`px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2.5 border-2 transition-all
+            className={`px-2 py-2.5 rounded-xl font-semibold text-sm flex gap-1.5 items-center border-2 transition-all
                 ${
                   currentNetwork.name === "devnet"
                     ? "bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-300 hover:from-blue-100 hover:to-cyan-100"
@@ -175,7 +179,7 @@ const Header = () => {
             backgroundColor: "#02CCE6",
             color: "white",
             fontWeight: "600",
-            padding: "0.5rem 1rem",
+            padding: "0rem 1rem",
             borderRadius: "0.25rem",
             display: "flex",
             alignItems: "center",
