@@ -466,7 +466,7 @@ export default function TokenForm() {
         } else if (activeOption === "custom") {
           closeAuth = publicKey(customRefundAddress.trim());
         }
-        txBuilder.add(
+        txBuilder = txBuilder.add(
           setAuthority(umi, {
             owned: tokenAccount[0],
             owner: umi.identity,
