@@ -86,7 +86,7 @@ export const tokenFormTranslations = {
     generatedAddress: "Generated Address:",
     accdel: "Account Deletion Fee Refund Designation",
     accdesc:
-      "When a token account is deleted from the user's wallet, specify the wallet to which the deposit will be refunded",
+      "When a token account is deleted from the user's wallet, specify the wallet to which the rent will be refunded",
     soltool: "SOL Tool",
     accOwner: "Account owner",
     tokenCreator: "Token Creator",

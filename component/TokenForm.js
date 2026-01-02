@@ -584,8 +584,47 @@ export default function TokenForm() {
               <TooltipLabel label={t?.supply} tooltip={t?.supplyTooltip} />
               <input
                 type="number"
+                min="0"
+                step={1}
                 value={supply}
-                onChange={(e) => setSupply(Number(e.target.value) || 0)}
+                onChange={(e) => {
+                  const rawValue = e.target.value;
+                  if (rawValue === "") {
+                    setSupply(0);
+                    return;
+                  }
+
+                  const newSupply = Number(rawValue);
+
+                  // Prevent negative numbers
+                  if (newSupply < 0) {
+                    toast.error(
+                      t?.supplyPositive || "Supply must be a positive number"
+                    );
+                    return;
+                  }
+
+                  // Calculate total units: supply * 10^decimals
+                  try {
+                    const totalUnits =
+                      BigInt(newSupply) * 10n ** BigInt(decimals);
+                    const U64_MAX = 18_446_744_073_709_551_615n;
+
+                    if (totalUnits > U64_MAX) {
+                      toast.error(
+                        t?.supplyTooLarge ||
+                          `Maximum supply with ${decimals} decimals is ${Math.floor(
+                            Number(U64_MAX / 10n ** BigInt(decimals))
+                          )}`
+                      );
+                      return;
+                    }
+                    setSupply(newSupply);
+                  } catch (err) {
+                    toast.error(t?.invalidSupply || "Invalid supply value");
+                  }
+                }}
+                placeholder={t?.supplydesc || "e.g., 1000000000"}
                 className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
               />
               <p className="text-xs text-gray-500 mt-1">{t?.supplydesc}</p>
@@ -1083,25 +1122,32 @@ export default function TokenForm() {
 
         {/* Account Deletion */}
         <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm my-8">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-xl font-bold">🗑️ {t?.accdel}</h2>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-[#02CCE6]">
-                +{fees.accountDeleteRefundFee} SOL
-              </span>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={deletion}
-                  onChange={() => setDeletion(!deletion)}
-                />
-                <span className="slider"></span>
-              </label>
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-xl font-bold">🗑️ {t?.accdel}</h2>
+
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-[#02CCE6]">
+                  +{fees.accountDeleteRefundFee} SOL
+                </span>
+
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={deletion}
+                    onChange={() => setDeletion(!deletion)}
+                  />
+                  <span className="slider"></span>
+                </label>
+              </div>
             </div>
+
+            {/* Description below */}
+            <p className="text-sm text-gray-600">{t?.accdesc}</p>
           </div>
+
           {deletion && (
             <>
-              <p className="text-sm text-gray-600 mb-4">{t?.accdesc}</p>
               <div className="grid md:grid-cols-4 gap-4">
                 {["sol", "token", "owner", "custom"].map((opt) => (
                   <div
