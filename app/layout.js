@@ -6,7 +6,8 @@ import "./globals.css";
 
 export const metadata = {
   title: "Sol tool",
-  description: "Developed by Zakki",
+  description:
+    "A simple tool to create your SPL meme tokens with advance features and manage ownership, minting, feezing and metadata.",
 };
 
 export default function RootLayout({ children }) {
