@@ -407,7 +407,7 @@ export default function AdminPage() {
             <div className="flex flex-col sm:flex-row gap-4">
               <input
                 type="number"
-                step="0.000001"
+                step="0.01"
                 min="0"
                 max={balance}
                 placeholder={t.withdrawAmount}
