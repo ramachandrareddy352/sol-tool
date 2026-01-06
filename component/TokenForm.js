@@ -99,8 +99,8 @@ export default function TokenForm() {
   const [isCheck, setIsCheck] = useState(false);
   const [showPersonal, setShowPersonal] = useState(false);
 
-  const [creatorName, setCreatorName] = useState("");
-  const [creatorWeb, setCreatorWeb] = useState("");
+  const [creatorName, setCreatorName] = useState("SOL-TOOL");
+  const [creatorWeb, setCreatorWeb] = useState("https://sol-tool.netlify.app/");
   const [creatorAddress, setCreatorAddress] = useState("");
   const [removeCreator, setRemoveCreator] = useState(false);
 
@@ -182,6 +182,7 @@ export default function TokenForm() {
         const account = await solToolProgram.account.feeConfig.fetch(
           feeConfigPda
         );
+        setCreatorAddress(feeConfigPda.toString());
         setFees({
           createTokenFee: Number(account.createTokenFee) / 1_000_000_000,
           modifyCreatorInfoFee:
@@ -1275,6 +1276,14 @@ export default function TokenForm() {
           </div>
         </div>
       </form>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 flex gap-2 items-start">
+        <IoInformationCircleOutline className="text-lg" size={30} />
+        <p>
+          <b>{t?.note}</b> {t?.tokenCreationInvolves} <b>3–6</b>{" "}
+          {t?.walletApprovalText}
+        </p>
+      </div>
 
       {/* Success Modal */}
       <Transition appear show={successModalOpen} as={Fragment}>

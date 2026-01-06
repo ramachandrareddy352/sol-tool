@@ -11,23 +11,21 @@ const LiquidityPool = () => {
     en: {
       createLiquidityPool: "Do you need project development?",
       createHere: "Click Here",
-      goingToCreate: "Are you going to Create a Liquidity Pool?",
-      createInfo:
-        "If you want to create a liquidity pool you will need to Revoke Freeze Authority of the Token. You can also Revoke the Mint Authority to get the people reliability. You can do both here, each one costs 0.1 SOL.",
-      connectWallet: "Connect your wallet please.",
-      revokeFreeze: "Revoke Freeze Authority",
-      revokeMint: "Revoke Mint Authority",
       connect: "Connect:",
+      question: "Are you preparing a Solana project?",
+      desc1:
+        "Contact us for project development assistance. We are a top-tier Solana development team of five developers.",
+      desc2:
+        "We provide end-to-end services, from development to exchange listing.",
     },
     ko: {
+      question: "솔라나 프로젝트를 준비 중이신가요?",
+      desc1:
+        "프로젝트 개발이 필요하시면 언제든지 문의하세요. 저희는 5명의 개발자로 구성된 최상급 솔라나 전문 개발팀입니다.",
+      desc2:
+        "개발부터 거래소 상장까지, 엔드 투 엔드(End-to-End) 서비스를 제공합니다.",
       createLiquidityPool: "프로젝트 개발이 필요하신가요?",
       createHere: "여기를 클릭하세요",
-      goingToCreate: "유동성 풀을 생성하시겠습니까?",
-      createInfo:
-        "유동성 풀을 생성하려면 토큰의 동결 권한을 취소해야 합니다. 또한, 민트 권한을 취소하면 신뢰성을 높일 수 있습니다. 여기에서 두 가지 작업을 수행할 수 있으며, 각각 0.1 SOL이 필요합니다.",
-      connectWallet: "지갑을 연결해 주세요.",
-      revokeFreeze: "동결 권한 취소",
-      revokeMint: "민트 권한 취소",
       connect: "연결:",
     },
   };
@@ -46,10 +44,11 @@ const LiquidityPool = () => {
 
       <div className="my-5 flex gap-4 flex-col bg-[#ECFFFF] border-[#02CCE6] border-2 rounded p-5 md:py-14 md:px-20">
         <h1 className="text-xl font-semibold">
-          {translations[language].goingToCreate}
+          {translations[language].question}
         </h1>
 
-        <p>{translations[language].createInfo}</p>
+        <p>{translations[language].desc1}</p>
+        <p>{translations[language].desc2}</p>
 
         <div>
           <h1 className="text-xl font-semibold">

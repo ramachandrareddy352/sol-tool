@@ -15,7 +15,7 @@ const Faq = () => {
         "Connect your Solana wallet",
         "Write the name you want for your Token",
         "Indicate the symbol (max 8 characters)",
-        "Select the decimals quantity (0 for Whitelist Token, 6 for utility token)",
+        "Select the decimals quantity (6 for utility token)",
         "Write the description you want for your SPL Token",
         "Upload the image for your token (PNG)",
         "Put the Supply of your Token",
@@ -36,11 +36,6 @@ const Faq = () => {
           question: "What is the maximum symbol length for a token?",
           answer: "The token symbol can have a maximum of 8 characters.",
         },
-        {
-          question: "What are whitelist tokens?",
-          answer:
-            "Whitelist tokens are tokens with 0 decimal places, used mainly for access control and permissions.",
-        },
       ],
     },
     ko: {
@@ -50,7 +45,7 @@ const Faq = () => {
         "Solana 지갑을 연결하세요",
         "원하는 토큰 이름을 입력하세요",
         "토큰 심볼을 입력하세요 (최대 8자)",
-        "소수점 자릿수를 선택하세요 (화이트리스트 토큰은 0, 유틸리티 토큰은 6)",
+        "소수점 자릿수를 선택하세요 (유틸리티 토큰은 6)",
         "SPL 토큰에 대한 설명을 작성하세요",
         "토큰의 이미지를 업로드하세요 (PNG)",
         "토큰 공급량을 입력하세요",
@@ -70,11 +65,6 @@ const Faq = () => {
         {
           question: "토큰 심볼의 최대 길이는 얼마인가요?",
           answer: "토큰 심볼은 최대 8자까지 입력할 수 있습니다.",
-        },
-        {
-          question: "화이트리스트 토큰이란?",
-          answer:
-            "화이트리스트 토큰은 0 소수 자릿수를 가지며, 주로 접근 제어 및 권한 부여를 위해 사용됩니다.",
         },
       ],
     },

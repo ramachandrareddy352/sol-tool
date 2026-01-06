@@ -66,138 +66,164 @@ const Header = () => {
   };
 
   return (
-    <header className="max-w-6xl py-3 px-2 mx-auto bg-[#FCFCFD] flex justify-between items-center">
-      <Link href="/" className="flex items-center gap-2">
-        <div className="lg:hidden flex">
-          <button onClick={handleMenuToggle} className="text-[18px]">
+    <header className="bg-[#FCFCFD] border-b border-[#E6E8EC]">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        {/* ================= LEFT : LOGO ================= */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Mobile Menu */}
+          <button
+            onClick={handleMenuToggle}
+            className="lg:hidden text-xl text-gray-700"
+          >
             <FaBars />
           </button>
-        </div>
-        <img src="logo.png" className="w-6" alt="logo" />
-        <h1 className="hidden md:block text-2xl font-extrabold font-[Barlow_Condensed]">
-          Sol - Tool
-        </h1>
-      </Link>
 
-      <nav
-        className={`lg:flex lg:gap-9 text-[16px] font-[Poppins] ${
-          menuOpen
-            ? "flex flex-col text-center gap-2 absolute z-30 top-24 left-0 w-full bg-[#FCFCFD]"
-            : "hidden"
-        }`}
-      >
-        {[
-          { href: "/", label: translations[language].creator },
-          { href: "/minting", label: translations[language].mint },
-          { href: "/freezing", label: translations[language].freeze },
-          { href: "/meta", label: translations[language].meta },
-          { href: "/owner", label: translations[language].owner },
-        ].map(({ href, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`p-2 border-[#E6E8EC] md:border-none md:p-0 border-b ${
-              pathname === href ? "active" : ""
-            }`}
-          >
-            {label}
+          <Link href="/" className="flex items-center gap-2">
+            <img src="logo.png" className="w-7 h-7" alt="logo" />
+            <h1 className="hidden sm:block text-2xl font-extrabold font-[Barlow_Condensed]">
+              Sol&nbsp;Tool
+            </h1>
           </Link>
-        ))}
-      </nav>
-
-      <div className="flex gap-3 md:gap-5 items-center">
-        <Link href="/development">
-          <FaTelegram size={25} />
-        </Link>
-
-        <div className="relative">
-          <SlGlobe
-            className="text-xl cursor-pointer"
-            onClick={handleLangToggle}
-          />
-
-          {langOpen && (
-            <div className="absolute left-0 mt-4 w-44 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
-              <button
-                onClick={() => handleLangChange("en")}
-                className="w-full text-left px-6 py-4 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 hover:text-[#02CCE6] transition font-medium"
-              >
-                English
-              </button>
-              <button
-                onClick={() => handleLangChange("ko")}
-                className="w-full text-left px-6 py-4 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 hover:text-[#02CCE6] transition font-medium border-t border-gray-100"
-              >
-                한국어
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Network Dropdown */}
-        <div className="relative">
-          <button
-            onClick={handleNetworkToggle}
-            className={`px-2 py-2.5 rounded-xl font-semibold text-sm flex gap-1.5 items-center border-2 transition-all
-                ${
-                  currentNetwork.name === "devnet"
-                    ? "bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-300 hover:from-blue-100 hover:to-cyan-100"
-                    : "bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-red-300 hover:from-red-100 hover:to-pink-100"
-                }`}
+        {/* ================= CENTER : NAV LINKS ================= */}
+        <nav className="hidden lg:flex gap-10 text-[16px] font-[Poppins]">
+          {[
+            { href: "/", label: translations[language].creator },
+            { href: "/minting", label: translations[language].mint },
+            { href: "/freezing", label: translations[language].freeze },
+            { href: "/meta", label: translations[language].meta },
+            { href: "/owner", label: translations[language].owner },
+          ].map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`p-2 border-[#E6E8EC] md:border-none md:p-0 border-b ${
+                pathname === href ? "active" : ""
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* ================= RIGHT : ACTIONS ================= */}
+        <div className="flex items-center gap-4 md:gap-5">
+          {/* Development / Telegram */}
+          <Link
+            href="/development"
+            className="text-gray-700 hover:text-[#02CCE6] transition"
+            title="Development Support"
           >
-            <span className="w-2.5 h-2.5 rounded-full bg-current animate-pulse"></span>
-            {currentNetwork.label}
-          </button>
+            <FaTelegram size={22} />
+          </Link>
 
-          {networkOpen && (
-            <div className="absolute right-0 mt-2 w-50 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
-              <button
-                onClick={() => handleNetworkChange("devnet")}
-                className="w-full text-left px-3 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 transition flex items-center gap-4"
-              >
-                <span className="w-5 h-5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"></span>
-                <div>
-                  <div className="font-bold text-gray-800">Devnet</div>
-                </div>
-              </button>
-              <div className="border-t border-gray-200"></div>
-              <button
-                onClick={() => handleNetworkChange("mainnet")}
-                className="w-full text-left px-3 py-3 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 transition flex items-center gap-4"
-              >
-                <span className="w-5 h-5 rounded-full bg-gradient-to-r from-red-500 to-pink-500"></span>
-                <div>
-                  <div className="font-bold text-gray-800">Mainnet-Beta</div>
-                </div>
-              </button>
-            </div>
-          )}
+          {/* Language Selector */}
+          <div className="relative">
+            <SlGlobe
+              className="text-xl cursor-pointer hover:text-[#02CCE6]"
+              onClick={handleLangToggle}
+            />
+
+            {langOpen && (
+              <div className="absolute right-0 mt-3 w-40 bg-white rounded-xl shadow-xl border z-50 overflow-hidden">
+                <button
+                  onClick={() => handleLangChange("en")}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 font-medium"
+                >
+                  English
+                </button>
+                <button
+                  onClick={() => handleLangChange("ko")}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 font-medium border-t"
+                >
+                  한국어
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Network Selector */}
+          <div className="relative">
+            <button
+              onClick={handleNetworkToggle}
+              className={`px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 border transition
+            ${
+              currentNetwork.name === "devnet"
+                ? "bg-blue-50 text-blue-700 border-blue-300"
+                : "bg-red-50 text-red-700 border-red-300"
+            }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-current animate-pulse" />
+              {currentNetwork.label}
+            </button>
+
+            {networkOpen && (
+              <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border z-50">
+                <button
+                  onClick={() => handleNetworkChange("devnet")}
+                  className="w-full px-4 py-3 text-left hover:bg-blue-50"
+                >
+                  Devnet
+                </button>
+                <button
+                  onClick={() => handleNetworkChange("mainnet")}
+                  className="w-full px-4 py-3 text-left hover:bg-red-50 border-t"
+                >
+                  Mainnet-Beta
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Wallet */}
+          <WalletMultiButton
+            style={{
+              backgroundColor: "#02CCE6",
+              color: "white",
+              fontWeight: "600",
+              padding: "0.4rem 1rem",
+              borderRadius: "0.5rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              border: "none",
+            }}
+          >
+            <span>
+              {publicKey
+                ? `${publicKey.toString().slice(0, 4)}...${publicKey
+                    .toString()
+                    .slice(-4)}`
+                : translations[language].connectWallet}
+            </span>
+          </WalletMultiButton>
         </div>
-
-        <WalletMultiButton
-          style={{
-            backgroundColor: "#02CCE6",
-            color: "white",
-            fontWeight: "600",
-            padding: "0rem 1rem",
-            borderRadius: "0.25rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.5rem",
-            border: "none", // Optional: Remove any default borders
-            cursor: "pointer", // Ensure clickable feel
-          }}
-        >
-          <span>
-            {publicKey
-              ? `${publicKey.toString().slice(0, 4)}...${publicKey
-                  .toString()
-                  .slice(-4)}`
-              : translations[language].connectWallet}
-          </span>
-        </WalletMultiButton>
       </div>
+
+      {/* ================= MOBILE MENU ================= */}
+      {menuOpen && (
+        <div className="lg:hidden border-t bg-white">
+          <nav className="flex flex-col text-center">
+            {[
+              { href: "/", label: translations[language].creator },
+              { href: "/minting", label: translations[language].mint },
+              { href: "/freezing", label: translations[language].freeze },
+              { href: "/meta", label: translations[language].meta },
+              { href: "/owner", label: translations[language].owner },
+            ].map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMenuOpen(false)}
+                className="py-3 border-b hover:bg-gray-50"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
     </header>
   );
 };

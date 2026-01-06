@@ -123,8 +123,16 @@ export const tokenFormTranslations = {
     prepareMetadataStage: "Prepare Metadata",
     uploadMetadatStage: "Upload Metadata",
     confirmTxStage: "Confirm Tx",
+    note: "NOTE: ",
+    tokenCreationInvolves: " Token creation involves ",
+    walletApprovalText:
+      " wallet approval transactions, depending on the options you select (metadata, minting, authority revocations, etc.). In addition to the SolTool service fee, a small Solana network (gas) fee will be charged for each transaction. Please ensure your wallet has sufficient SOL balance before proceeding.",
   },
   ko: {
+    note: "안내: ",
+    tokenCreationInvolves: " 토큰 생성 과정에는 ",
+    walletApprovalText:
+      " 선택한 옵션(메타데이터, 민팅, 권한 해제 등)에 따라 3~6회의 지갑 승인 트랜잭션이 필요합니다. SolTool 서비스 수수료 외에도 각 트랜잭션마다 소량의 Solana 네트워크(가스) 수수료가 부과됩니다. 진행하기 전에 지갑에 충분한 SOL 잔액이 있는지 확인해 주세요.",
     startStage: "시작",
     createStage: "생성 시작",
     uploadImageStage: "이미지 업로드",
