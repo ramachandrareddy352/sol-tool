@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../app/Context/LanguageContext";
 import { useNetwork } from "../app/Context/NetworkContext";
@@ -14,9 +13,9 @@ import {
   getMint,
   getAssociatedTokenAddress,
   getAccount,
-  mintTo,
   createMintToInstruction,
   createBurnInstruction,
+  createCloseAccountInstruction,
 } from "@solana/spl-token";
 import toast from "react-hot-toast";
 import { useSolToolAnchorProgram } from "@/utils/fetch_fee_config";
@@ -28,11 +27,16 @@ const MinForm = () => {
   const wallet = useWallet();
 
   const [loadingFees, setLoadingFees] = useState(true);
-  const [fees, setFees] = useState({ mintFee: 0.1, burnFee: 0.1 }); // In SOL
+  const [fees, setFees] = useState({
+    mintFee: 0.1,
+    burnFee: 0.1,
+    closeAccountFee: 0.1,
+  });
 
+  // Unified translations for both languages
   const t = {
     en: {
-      /* -------- General -------- */
+      // General
       tokenAddress: "Token Address:",
       enterAddress: "Enter Token Mint Address",
       check: "Check",
@@ -41,13 +45,7 @@ const MinForm = () => {
       loadingFee: "Loading fee configuration...",
       connectWallet: "Please connect your wallet",
 
-      /* -------- User / Amount -------- */
-      userAddress: "User Address:",
-      enterUserAddress: "Enter User Wallet Address",
-      amount: "Amount:",
-      enterAmount: "Enter Amount",
-
-      /* -------- Token Info -------- */
+      // Token Info
       tokenInfo: "Token Information",
       totalSupply: "Total Supply",
       decimals: "Decimals",
@@ -56,103 +54,124 @@ const MinForm = () => {
       variableSupply: "Variable Supply (Mint Authority Active)",
       userBalance: "Your Balance",
 
-      /* -------- Mint -------- */
-      mint: "Mint Tokens",
+      // Mint
       mintTokens: "Mint Tokens",
+      userAddress: "Recipient Address:",
+      enterUserAddress: "Enter recipient wallet address",
+      amount: "Amount:",
+      enterAmount: "Enter amount to mint",
       minting: "Minting...",
-      notMintAuthority: "You are not the mint authority for this token",
+      notMintAuthority: "You are not the mint authority",
       mintRestricted: "Minting Restricted",
       noMintAuthorityWarning: "You do not have mint authority for this token.",
-      fixedSupplyWarning:
-        "This token has a fixed supply. Minting is permanently disabled.",
+      fixedSupplyWarning: "This token has fixed supply. Minting is disabled.",
 
-      /* -------- Burn -------- */
-      burn: "Burn Tokens",
+      // Burn
       burnTokens: "Burn Tokens",
       burning: "Burning...",
-      insufficientBalance: "Insufficient balance to burn",
+      insufficientBalance: "Insufficient balance",
 
-      /* -------- Fees -------- */
+      // Close Account
+      closeAccount: "Close Token Account",
+      closeAccountDesc: "Close your token account and reclaim rent SOL",
+      balanceWarning:
+        "Your balance is greater than 0. You must burn tokens first to close the account.",
+      burnAndClose: "Burn All & Close Account",
+      burnAndCloseDesc:
+        "Burn your entire balance and close the account in one transaction",
+      refundAddress: "Rent Refund Address:",
+      refundAddressPlaceholder:
+        "Enter address to receive rent-exempt SOL (default: your wallet)",
+      closing: "Closing account...",
+
+      // Fees
       fee: "Fee:",
 
-      /* -------- Status Check -------- */
-      checkStatus: "Check Freeze Status",
-      checkingStatus: "Checking status...",
-
-      /* -------- Errors -------- */
+      // Errors
       invalidToken: "Invalid SPL Token address",
-      notSPLToken: "This is not a valid SPL Token",
-      invalidUserAddress: "Invalid user address",
+      notSPLToken: "Not a valid SPL Token",
+      invalidAddress: "Invalid wallet address",
       invalidAmount: "Invalid amount",
-      noTokenAccount: "No token account found.",
+      noTokenAccount: "No token account found for this mint",
 
-      /* -------- Success / Failure -------- */
-      successMint: "Tokens minted successfully",
-      successBurn: "Tokens burned successfully",
+      // Success
+      successMint: "Tokens minted successfully!",
+      successBurn: "Tokens burned successfully!",
+      successClose: "Token account closed successfully!",
+      successBurnAndClose: "All tokens burned and account closed!",
+
+      // Failure
       errorMint: "Failed to mint tokens",
       errorBurn: "Failed to burn tokens",
+      errorClose: "Failed to close account",
     },
-
     ko: {
-      /* -------- General -------- */
+      // General
       tokenAddress: "토큰 주소:",
       enterAddress: "토큰 민트 주소 입력",
       check: "확인",
       checking: "확인 중...",
       pleaseWait: "잠시만 기다려 주세요",
-      loadingFee: "수수료 설정을 불러오는 중입니다...",
-      connectWallet: "지갑을 연결하세요",
+      loadingFee: "수수료 설정 로드 중...",
+      connectWallet: "지갑을 연결해주세요",
 
-      /* -------- User / Amount -------- */
-      userAddress: "사용자 주소:",
-      enterUserAddress: "사용자 지갑 주소 입력",
-      amount: "수량:",
-      enterAmount: "수량 입력",
-
-      /* -------- Token Info -------- */
+      // Token Info
       tokenInfo: "토큰 정보",
       totalSupply: "총 공급량",
       decimals: "소수점",
       supplyType: "공급 유형",
       fixedSupply: "고정 공급 (민트 권한 취소됨)",
-      variableSupply: "가변 공급 (민트 권한 활성)",
+      variableSupply: "가변 공급 (민트 권한 유지됨)",
       userBalance: "내 잔액",
 
-      /* -------- Mint -------- */
-      mint: "토큰 민트",
+      // Mint
       mintTokens: "토큰 민트",
+      userAddress: "수령자 주소:",
+      enterUserAddress: "수령할 지갑 주소 입력",
+      amount: "수량:",
+      enterAmount: "민트할 수량 입력",
       minting: "민트 중...",
-      notMintAuthority: "이 토큰의 민트 권한이 없습니다",
+      notMintAuthority: "민트 권한이 없습니다",
       mintRestricted: "민트 제한됨",
-      noMintAuthorityWarning: "이 토큰에 대한 민트 권한이 없습니다.",
-      fixedSupplyWarning:
-        "이 토큰은 고정 공급 토큰으로, 민트가 영구적으로 비활성화되어 있습니다.",
+      noMintAuthorityWarning: "이 토큰의 민트 권한이 없습니다.",
+      fixedSupplyWarning: "고정 공급 토큰으로 민트가 불가능합니다.",
 
-      /* -------- Burn -------- */
-      burn: "토큰 소각",
+      // Burn
       burnTokens: "토큰 소각",
       burning: "소각 중...",
-      insufficientBalance: "소각할 잔액이 부족합니다",
+      insufficientBalance: "잔액 부족",
 
-      /* -------- Fees -------- */
+      // Close Account
+      closeAccount: "토큰 계정 닫기",
+      closeAccountDesc: "토큰 계정을 닫고 렌트 SOL을 회수하세요",
+      balanceWarning:
+        "잔액이 0보다 큽니다. 계정 닫기 전 토큰을 먼저 소각해야 합니다.",
+      burnAndClose: "전체 소각 후 계정 닫기",
+      burnAndCloseDesc: "잔액 전체를 소각하고 계정을 한 번에 닫습니다",
+      refundAddress: "렌트 환급 주소:",
+      refundAddressPlaceholder: "렌트 SOL을 받을 주소 (기본: 내 지갑)",
+      closing: "계정 닫는 중...",
+
+      // Fees
       fee: "수수료:",
 
-      /* -------- Status Check -------- */
-      checkStatus: "동결 상태 확인",
-      checkingStatus: "상태 확인 중...",
-
-      /* -------- Errors -------- */
-      invalidToken: "잘못된 SPL 토큰 주소",
+      // Errors
+      invalidToken: "유효하지 않은 SPL 토큰 주소",
       notSPLToken: "유효한 SPL 토큰이 아닙니다",
-      invalidUserAddress: "잘못된 사용자 주소",
+      invalidAddress: "잘못된 지갑 주소",
       invalidAmount: "잘못된 수량",
-      noTokenAccount: "토큰 계정을 찾을 수 없습니다.",
+      noTokenAccount: "이 민트에 대한 토큰 계정이 없습니다",
 
-      /* -------- Success / Failure -------- */
-      successMint: "토큰이 성공적으로 민트되었습니다",
-      successBurn: "토큰이 성공적으로 소각되었습니다",
+      // Success
+      successMint: "토큰 민트 성공!",
+      successBurn: "토큰 소각 성공!",
+      successClose: "토큰 계정 닫기 성공!",
+      successBurnAndClose: "전체 소각 후 계정 닫기 성공!",
+
+      // Failure
       errorMint: "토큰 민트 실패",
       errorBurn: "토큰 소각 실패",
+      errorClose: "계정 닫기 실패",
     },
   }[language];
 
@@ -166,29 +185,25 @@ const MinForm = () => {
     </div>
   );
 
-  // Load fees from on-chain config
+  // Load fees
   useEffect(() => {
     const fetchFees = async () => {
       try {
         const data = await solToolProgram.account.feeConfig.fetch(feeConfigPda);
-        if (data) {
-          const lamportsToSol = (lamports) => Number(lamports) / 1_000_000_000;
-          setFees({
-            mintFee: lamportsToSol(data.mintTokensFee),
-            burnFee: lamportsToSol(data.burnTokensFee),
-          });
-        }
+        const lamportsToSol = (lamports) => Number(lamports) / 1_000_000_000;
+        setFees({
+          mintFee: lamportsToSol(data.mintTokensFee),
+          burnFee: lamportsToSol(data.burnTokensFee),
+          closeAccountFee: lamportsToSol(data.accountDeleteRefundFee),
+        });
       } catch (err) {
         console.error("Failed to load fees:", err);
-        toast.error("Failed to load service fees");
+        toast.error("Failed to load fees");
       } finally {
         setLoadingFees(false);
       }
     };
-
-    if (solToolProgram) {
-      fetchFees();
-    }
+    if (solToolProgram) fetchFees();
   }, [solToolProgram, feeConfigPda]);
 
   const [tokenAddress, setTokenAddress] = useState("");
@@ -199,40 +214,46 @@ const MinForm = () => {
   const [decimals, setDecimals] = useState(0);
   const [isFixedSupply, setIsFixedSupply] = useState(false);
   const [userBalance, setUserBalance] = useState(0);
+  const [userATA, setUserATA] = useState(null);
+  const [mintPubkey, setMintPubkey] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Mint inputs
   const [userAddressMint, setUserAddressMint] = useState("");
   const [amountMint, setAmountMint] = useState("");
-  const [amountBurn, setAmountBurn] = useState("");
 
-  const [updatingMint, setUpdatingMint] = useState(false);
-  const [updatingBurn, setUpdatingBurn] = useState(false);
+  // Burn input
+  const [amountBurn, setAmountBurn] = useState("");
+  const [hasTokenAccount, setHasTokenAccount] = useState(false);
+
+  // Close account inputs
+  const [refundAddress, setRefundAddress] = useState();
+  const [closing, setClosing] = useState(false);
+  const [burnAndClosing, setBurnAndClosing] = useState(false);
 
   const connection = useMemo(() => {
     if (!wallet.connected) return null;
     return new Connection(currentNetwork.rpc, "confirmed");
   }, [wallet.connected, currentNetwork]);
 
-  // Reset states on wallet or network change
+  // Reset on wallet/network change
   useEffect(() => {
     setTokenAddress("");
     setIsValidToken(false);
-    setIsMintAuthority(false);
-    setTotalSupply(0);
-    setDecimals(0);
-    setIsFixedSupply(false);
-    setUserBalance(0);
+    setUserATA(null);
+    setMintPubkey(null);
     setErrorMessage("");
     setUserAddressMint("");
     setAmountMint("");
     setAmountBurn("");
+    setRefundAddress();
   }, [wallet.publicKey, currentNetwork]);
 
-  const validatePubkey = (address) => {
+  const validatePubkey = (addr) => {
     try {
-      return new PublicKey(address.trim());
-    } catch (error) {
-      throw new Error(t.invalidPubkey || "Invalid public key");
+      return new PublicKey(addr.trim());
+    } catch {
+      throw new Error(t.invalidAddress);
     }
   };
 
@@ -249,41 +270,37 @@ const MinForm = () => {
     setChecking(true);
     setErrorMessage("");
     setIsValidToken(false);
-    setIsMintAuthority(false);
-    setTotalSupply(0);
-    setDecimals(0);
-    setIsFixedSupply(false);
-    setUserBalance(0);
+    setHasTokenAccount(false); // Reset
 
     try {
-      const mintPubkey = validatePubkey(tokenAddress);
-      const mint = await getMint(connection, mintPubkey);
+      const mintPk = validatePubkey(tokenAddress);
+      setMintPubkey(mintPk);
 
-      const isAuth = mint.mintAuthority
-        ? mint.mintAuthority.equals(wallet.publicKey)
-        : false;
-      const isRevoked = !mint.mintAuthority;
+      const mint = await getMint(connection, mintPk);
+      const hasMintAuth = mint.mintAuthority?.equals(wallet.publicKey) || false;
+      const revoked = mint.mintAuthority === null;
 
-      setIsMintAuthority(isAuth);
-      setIsFixedSupply(isRevoked);
-      setTotalSupply(Number(mint.supply) / 10 ** mint.decimals);
+      setIsMintAuthority(hasMintAuth);
+      setIsFixedSupply(revoked);
       setDecimals(mint.decimals);
+      setTotalSupply(Number(mint.supply) / 10 ** mint.decimals);
 
-      // Get user balance
+      // Check for user's ATA
+      const ata = await getAssociatedTokenAddress(mintPk, wallet.publicKey);
+      setUserATA(ata);
+
       try {
-        const userATA = await getAssociatedTokenAddress(
-          mintPubkey,
-          wallet.publicKey
-        );
-        const account = await getAccount(connection, userATA);
+        const account = await getAccount(connection, ata);
         setUserBalance(Number(account.amount) / 10 ** mint.decimals);
+        setHasTokenAccount(true); // ATA exists and has data
       } catch (err) {
-        setUserBalance(0); // No ATA or balance
+        // No ATA or closed
+        setUserBalance(0);
+        setHasTokenAccount(false);
       }
 
       setIsValidToken(true);
     } catch (error) {
-      console.error("Token check error:", error);
       setErrorMessage(error.message || t.notSPLToken);
       toast.error(error.message || t.notSPLToken);
     } finally {
@@ -292,70 +309,51 @@ const MinForm = () => {
   };
 
   const performMint = async () => {
-    if (
-      !wallet.connected ||
-      !connection ||
-      !isValidToken ||
-      !isMintAuthority ||
-      !fees
-    )
-      return;
-
-    if (!userAddressMint.trim()) {
-      toast.error(t.invalidUserAddress);
-      return;
-    }
-    if (
-      !amountMint.trim() ||
-      isNaN(Number(amountMint)) ||
-      Number(amountMint) <= 0
-    ) {
-      toast.error(t.invalidAmount);
-      return;
-    }
-
-    const data = await solToolProgram.account.feeConfig.fetch(feeConfigPda);
-    const feeLamports = BigInt(data.mintTokensFee);
+    if (!isValidToken || !isMintAuthority || !mintPubkey || !connection) return;
+    if (!userAddressMint.trim()) return toast.error(t.invalidAddress);
+    if (!amountMint || Number(amountMint) <= 0)
+      return toast.error(t.invalidAmount);
 
     setUpdatingMint(true);
-
     try {
-      const userPubkey = validatePubkey(userAddressMint);
-      const mintPubkey = new PublicKey(tokenAddress);
-      const userATA = await getAssociatedTokenAddress(mintPubkey, userPubkey);
-
-      const feeTransferInstr = SystemProgram.transfer({
-        fromPubkey: wallet.publicKey,
-        toPubkey: feeConfigPda,
-        lamports: feeLamports,
-      });
-
-      const mintInstr = createMintToInstruction(
+      const recipient = validatePubkey(userAddressMint);
+      const recipientATA = await getAssociatedTokenAddress(
         mintPubkey,
-        userATA,
-        wallet.publicKey,
-        BigInt(Number(amountMint) * 10 ** decimals)
+        recipient
       );
 
-      let tx = new Transaction().add(feeTransferInstr).add(mintInstr);
-      const { blockhash, lastValidBlockHeight } =
-        await connection.getLatestBlockhash("confirmed");
+      const data = await solToolProgram.account.feeConfig.fetch(feeConfigPda);
+      const feeLamports = data.mintTokensFee;
 
-      tx.recentBlockhash = blockhash;
+      const tx = new Transaction()
+        .add(
+          SystemProgram.transfer({
+            fromPubkey: wallet.publicKey,
+            toPubkey: feeConfigPda,
+            lamports: feeLamports,
+          })
+        )
+        .add(
+          createMintToInstruction(
+            mintPubkey,
+            recipientATA,
+            wallet.publicKey,
+            BigInt(Number(amountMint) * 10 ** decimals)
+          )
+        );
+
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
       tx.feePayer = wallet.publicKey;
 
-      const signature = await wallet.sendTransaction(tx, connection);
-      await connection.confirmTransaction(signature, "confirmed");
+      const sig = await wallet.sendTransaction(tx, connection);
+      await connection.confirmTransaction(sig, "confirmed");
 
       toast.success(t.successMint);
-
       setUserAddressMint("");
       setAmountMint("");
-
-      // Refresh token data
       await checkToken();
-    } catch (error) {
-      console.error("Mint failed:", error);
+    } catch (err) {
+      console.error(err);
       toast.error(t.errorMint);
     } finally {
       setUpdatingMint(false);
@@ -363,194 +361,238 @@ const MinForm = () => {
   };
 
   const performBurn = async () => {
-    if (!wallet.connected || !connection || !isValidToken || !fees) return;
-
+    if (!isValidToken || !mintPubkey || !userATA || userBalance <= 0) return;
     if (
-      !amountBurn.trim() ||
-      isNaN(Number(amountBurn)) ||
-      Number(amountBurn) <= 0
+      !amountBurn ||
+      Number(amountBurn) <= 0 ||
+      Number(amountBurn) > userBalance
     ) {
-      toast.error(t.invalidAmount);
-      return;
+      return toast.error(t.insufficientBalance);
     }
-    if (Number(amountBurn) > userBalance) {
-      toast.error(t.insufficientBalance);
-      return;
-    }
-
-    const data = await solToolProgram.account.feeConfig.fetch(feeConfigPda);
-    const feeLamports = BigInt(data.burnTokensFee);
 
     setUpdatingBurn(true);
-
     try {
-      const mintPubkey = new PublicKey();
-      const userATA = await getAssociatedTokenAddress(
-        mintPubkey,
-        wallet.publicKey
-      );
+      const data = await solToolProgram.account.feeConfig.fetch(feeConfigPda);
+      const feeLamports = data.burnTokensFee;
 
-      // Check ATA exists
-      await getAccount(connection, userATA);
+      const tx = new Transaction()
+        .add(
+          SystemProgram.transfer({
+            fromPubkey: wallet.publicKey,
+            toPubkey: feeConfigPda,
+            lamports: feeLamports,
+          })
+        )
+        .add(
+          createBurnInstruction(
+            userATA,
+            mintPubkey,
+            wallet.publicKey,
+            BigInt(Number(amountBurn) * 10 ** decimals)
+          )
+        );
 
-      const feeTransferInstr = SystemProgram.transfer({
-        fromPubkey: wallet.publicKey,
-        toPubkey: feeConfigPda,
-        lamports: feeLamports,
-      });
-
-      const burnInstr = createBurnInstruction(
-        userATA,
-        mintPubkey,
-        wallet.publicKey,
-        BigInt(Number(amountBurn) * 10 ** decimals)
-      );
-
-      let tx = new Transaction().add(feeTransferInstr).add(burnInstr);
-      const { blockhash, lastValidBlockHeight } =
-        await connection.getLatestBlockhash("confirmed");
-
-      tx.recentBlockhash = blockhash;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
       tx.feePayer = wallet.publicKey;
 
-      const signature = await wallet.sendTransaction(tx, connection);
-      await connection.confirmTransaction(signature, "confirmed");
+      const sig = await wallet.sendTransaction(tx, connection);
+      await connection.confirmTransaction(sig);
 
       toast.success(t.successBurn);
-
       setAmountBurn("");
-
-      // Refresh token data
       await checkToken();
-    } catch (error) {
-      console.error("Burn failed:", error);
-      if (error.message.includes("Account does not exist")) {
-        toast.error(t.noTokenAccount);
-      } else {
-        toast.error(t.errorBurn);
-      }
+    } catch (err) {
+      console.error(err);
+      toast.error(t.errorBurn);
     } finally {
       setUpdatingBurn(false);
     }
   };
 
-  if (loadingFees) {
-    return <LoadingPage />;
-  }
+  const performCloseAccount = async (burnAll = false) => {
+    if (
+      !isValidToken ||
+      !mintPubkey ||
+      !userATA ||
+      !connection ||
+      !hasTokenAccount
+    ) {
+      toast.error(t.noTokenAccount);
+      return;
+    }
+
+    if (!burnAll && userBalance > 0) {
+      toast.error(t.balanceWarning);
+      return;
+    }
+
+    const isBurnAndClose = burnAll && userBalance > 0;
+    const action = isBurnAndClose ? setBurnAndClosing : setClosing;
+    action(true);
+
+    try {
+      const data = await solToolProgram.account.feeConfig.fetch(feeConfigPda);
+
+      // Correct fee calculation
+      let feeLamports = BigInt(data.accountDeleteRefundFee); // Always charge close fee
+
+      if (isBurnAndClose) {
+        feeLamports += BigInt(data.burnTokensFee); // Add burn fee only when burning
+      }
+
+      // Safe handling of refund address
+      const refundStr = (refundAddress || "").toString().trim();
+      const refundPubkey = refundStr
+        ? validatePubkey(refundStr)
+        : wallet.publicKey;
+
+      // Build transaction
+      const tx = new Transaction();
+
+      // 1. Pay service fee(s)
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: feeConfigPda,
+          lamports: feeLamports,
+        })
+      );
+
+      // 2. Burn all tokens if needed
+      if (isBurnAndClose) {
+        tx.add(
+          createBurnInstruction(
+            userATA,
+            mintPubkey,
+            wallet.publicKey,
+            BigInt(Math.round(userBalance * 10 ** decimals)) // Safe integer conversion
+          )
+        );
+      }
+
+      // 3. Close the token account (rent goes to refundPubkey)
+      tx.add(
+        createCloseAccountInstruction(userATA, refundPubkey, wallet.publicKey)
+      );
+
+      // Send transaction
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+      tx.feePayer = wallet.publicKey;
+
+      const signature = await wallet.sendTransaction(tx, connection);
+      await connection.confirmTransaction(signature, "confirmed");
+
+      toast.success(isBurnAndClose ? t.successBurnAndClose : t.successClose);
+
+      // Reset form and refresh token info
+      setRefundAddress("");
+      await checkToken(); // Will detect closed account → update UI correctly
+    } catch (err) {
+      console.error("Close account failed:", err);
+      toast.error(err.message || t.errorClose);
+    } finally {
+      action(false);
+    }
+  };
+
+  const [updatingMint, setUpdatingMint] = useState(false);
+  const [updatingBurn, setUpdatingBurn] = useState(false);
+
+  if (loadingFees) return <LoadingPage />;
 
   return (
     <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
       <form onSubmit={(e) => e.preventDefault()} className="space-y-10">
-        {/* ================= Token Address ================= */}
+        {/* Token Address */}
         <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
           <label className="block text-sm font-semibold text-gray-700 mb-3">
             🪙 {t.tokenAddress}
           </label>
-
           <div className="flex flex-col sm:flex-row gap-4">
             <input
-              className="flex-1 border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
-              type="text"
+              className="flex-1 border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
               placeholder={t.enterAddress}
               value={tokenAddress}
               onChange={(e) => setTokenAddress(e.target.value)}
             />
-
             <button
-              type="button"
               onClick={checkToken}
               disabled={checking || !tokenAddress.trim()}
-              className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
+              className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl font-semibold disabled:opacity-50 hover:bg-cyan-600 disabled:cursor-not-allowed"
             >
-              🔍 {checking ? t.checking : t.check}
+              {checking ? t.checking : t.check}
             </button>
           </div>
-
           {errorMessage && (
-            <p className="mt-3 text-sm font-medium text-red-600">
-              ⚠️ {errorMessage}
+            <p className="mt-3 text-sm text-red-600 font-medium">
+              {errorMessage}
             </p>
           )}
         </div>
 
-        {/* ================= Token Info ================= */}
         {isValidToken && (
-          <div className="grid gap-6">
+          <>
+            {/* Token Info */}
             <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 📊 {t.tokenInfo}
               </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <p>
-                  💰 <span className="font-semibold">{t.totalSupply}:</span>{" "}
-                  {totalSupply.toFixed(2)}
+                  <strong>{t.totalSupply}:</strong>{" "}
+                  {totalSupply.toLocaleString()}
                 </p>
                 <p>
-                  🔢 <span className="font-semibold">{t.decimals}:</span>{" "}
-                  {decimals}
+                  <strong>{t.decimals}:</strong> {decimals}
                 </p>
                 <p>
-                  🔒 <span className="font-semibold">{t.supplyType}:</span>{" "}
+                  <strong>{t.supplyType}:</strong>{" "}
                   {isFixedSupply ? t.fixedSupply : t.variableSupply}
                 </p>
                 <p>
-                  👤 <span className="font-semibold">{t.userBalance}:</span>{" "}
-                  {userBalance.toFixed(2)}
+                  <strong>{t.userBalance}:</strong> {userBalance.toFixed(4)}
                 </p>
               </div>
             </div>
 
-            {/* ================= Mint Section ================= */}
-            {isMintAuthority && !isFixedSupply ? (
+            {/* Mint Section */}
+            {isMintAuthority && !isFixedSupply && (
               <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
                   ➕ {t.mintTokens}
                 </h3>
-
                 <div className="space-y-4">
                   <input
-                    className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
                     placeholder={t.enterUserAddress}
                     value={userAddressMint}
                     onChange={(e) => setUserAddressMint(e.target.value)}
-                  />
-
-                  <input
                     className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+                  />
+                  <input
+                    type="number"
                     placeholder={t.enterAmount}
                     value={amountMint}
                     onChange={(e) => setAmountMint(e.target.value)}
+                    className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
                   />
-
                   <button
-                    type="button"
                     onClick={performMint}
-                    disabled={
-                      updatingMint ||
-                      !userAddressMint.trim() ||
-                      !amountMint.trim()
-                    }
-                    className="w-full bg-[#02CCE6] text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
+                    disabled={updatingMint || !userAddressMint || !amountMint}
+                    className="w-full bg-[#02CCE6] text-white py-3 rounded-xl font-semibold disabled:opacity-50 hover:bg-cyan-600"
                   >
-                    🪙 {updatingMint ? t.minting : t.mint}
+                    {updatingMint ? t.minting : t.mintTokens}
                   </button>
-
-                  <div className="text-xs text-gray-600">
-                    💰 {t.fee}{" "}
-                    <span className="font-semibold text-gray-800">
-                      {fees.mintFee} SOL
-                    </span>
-                  </div>
+                  <p className="text-xs text-gray-600">
+                    {t.fee} <strong>{fees.mintFee} SOL</strong>
+                  </p>
                 </div>
               </div>
-            ) : (
-              /* ================= Mint Authority Warning ================= */
-              <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6">
-                <h3 className="text-sm font-semibold text-yellow-800 mb-2">
-                  ⚠️ {t.mintRestricted}
-                </h3>
-                <p className="text-sm text-yellow-700">
+            )}
+
+            {/* Mint Warning */}
+            {(!isMintAuthority || isFixedSupply) && (
+              <div className="bg-yellow-50 border border-yellow-300 rounded-2xl p-6">
+                <p className="text-yellow-800 font-medium">
                   {isFixedSupply
                     ? t.fixedSupplyWarning
                     : t.noMintAuthorityWarning}
@@ -558,38 +600,102 @@ const MinForm = () => {
               </div>
             )}
 
-            {/* ================= Burn Section ================= */}
+            {/* Burn Section */}
             <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 🔥 {t.burnTokens}
               </h3>
-
               <input
-                className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm mb-4 focus:ring-2 focus:ring-[#02CCE6]"
+                type="number"
                 placeholder={t.enterAmount}
                 value={amountBurn}
                 onChange={(e) => setAmountBurn(e.target.value)}
+                className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 mb-4 text-sm focus:ring-2 focus:ring-[#02CCE6]"
               />
-
               <button
-                type="button"
                 onClick={performBurn}
                 disabled={
-                  updatingBurn || !amountBurn.trim() || userBalance <= 0
+                  updatingBurn ||
+                  !amountBurn ||
+                  Number(amountBurn) > userBalance
                 }
-                className="w-full bg-[#02CCE6] text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-50 hover:bg-cyan-600 transition disabled:cursor-not-allowed"
+                className="w-full bg-red-500 text-white py-3 rounded-xl font-semibold disabled:opacity-50 hover:bg-red-600"
               >
-                🔥 {updatingBurn ? t.burning : t.burn}
+                {updatingBurn ? t.burning : t.burnTokens}
               </button>
-
-              <div className="mt-2 text-xs text-gray-600">
-                💰 {t.fee}{" "}
-                <span className="font-semibold text-gray-800">
-                  {fees.burnFee} SOL
-                </span>
-              </div>
+              <p className="mt-2 text-xs text-gray-600">
+                {t.fee} <strong>{fees.burnFee} SOL</strong>
+              </p>
             </div>
-          </div>
+
+            {/* Close Account Section */}
+            <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                🗑️ {t.closeAccount}
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">{t.closeAccountDesc}</p>
+
+              {userBalance > 0 ? (
+                <div className="space-y-4">
+                  <div className="bg-orange-50 border border-orange-300 rounded-xl p-4">
+                    <p className="text-orange-800 text-sm font-medium">
+                      ⚠️ {t.balanceWarning}
+                    </p>
+                  </div>
+
+                  <input
+                    placeholder={t.refundAddressPlaceholder}
+                    value={refundAddress}
+                    onChange={(e) => setRefundAddress(e.target.value)}
+                    className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+                  />
+
+                  <button
+                    onClick={() => performCloseAccount(true)}
+                    disabled={burnAndClosing}
+                    className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white py-3 rounded-xl font-bold disabled:opacity-50"
+                  >
+                    {burnAndClosing ? t.closing : t.burnAndClose}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {hasTokenAccount && (
+                    <input
+                      placeholder={t.refundAddressPlaceholder}
+                      value={refundAddress}
+                      onChange={(e) => setRefundAddress(e.target.value)}
+                      className="w-full border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] mb-3"
+                    />
+                  )}
+                  {!hasTokenAccount && (
+                    <div className="bg-gray-50 border border-gray-300 rounded-2xl p-2 mb-3">
+                      <p className="text-gray-700 text-center font-medium">
+                        ℹ️ {t.noTokenAccount}
+                      </p>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => performCloseAccount(false)}
+                    disabled={closing || !hasTokenAccount}
+                    className="w-full bg-[#02CCE6] text-white py-3 rounded-xl font-semibold disabled:opacity-50 hover:bg-cyan-600"
+                  >
+                    {closing ? t.closing : t.closeAccount}
+                  </button>
+                </>
+              )}
+
+              <p className="mt-4 text-xs text-gray-600 ">
+                {t.fee}{" "}
+                <strong>
+                  {userBalance > 0
+                    ? fees.closeAccountFee + fees.burnFee
+                    : fees.closeAccountFee}{" "}
+                  SOL
+                </strong>
+              </p>
+            </div>
+          </>
         )}
       </form>
     </section>

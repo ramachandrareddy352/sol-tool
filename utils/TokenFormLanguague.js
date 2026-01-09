@@ -127,8 +127,10 @@ export const tokenFormTranslations = {
     tokenCreationInvolves: " Token creation involves ",
     walletApprovalText:
       " wallet approval transactions, depending on the options you select (metadata, minting, authority revocations, etc.). In addition to the SolTool service fee, a small Solana network (gas) fee will be charged for each transaction. Please ensure your wallet has sufficient SOL balance before proceeding.",
+    decimalIntegerOnly: "Decimals must be an integer",
   },
   ko: {
+    decimalIntegerOnly: "소수점 자릿수는 정수여야 합니다",
     note: "안내: ",
     tokenCreationInvolves: " 토큰 생성 과정에는 ",
     walletApprovalText:

@@ -16,6 +16,19 @@ export const MintTokenTranslations = {
     revocation: "Revocation",
     burnOwnership: "Burn Ownership:",
     removesBurnPermission: "Removes permission to burn tokens.",
+    closeAccount: "Close Token Account",
+    closeAccountDesc:
+      "Close your token account to reclaim rent. Account balance must be zero.",
+    closeWarningNonZero: "Account balance must be zero before closing.",
+    burnAndClose: "Burn All & Close",
+    closeOnly: "Close Account",
+    rentReceiver: "Rent Receiver Address",
+    enterRentReceiver: "Enter address to receive rent",
+    closing: "Closing...",
+    closeSuccess: "Token account closed successfully",
+    closeError: "Failed to close token account",
+    burnAndCloseConfirm:
+      "This will burn all tokens and close the account. Continue?",
   },
   ko: {
     tokenAddress: "토큰 주소:",
@@ -33,5 +46,18 @@ export const MintTokenTranslations = {
     revocation: "폐지",
     burnOwnership: "소각 소유권:",
     removesBurnPermission: "토큰 소각 권한을 제거합니다.",
+    closeAccount: "토큰 계정 닫기",
+    closeAccountDesc:
+      "토큰 계정을 닫아 렌트를 회수합니다. 잔액은 0이어야 합니다.",
+    closeWarningNonZero: "계정을 닫으려면 잔액이 0이어야 합니다.",
+    burnAndClose: "전체 소각 후 닫기",
+    closeOnly: "계정 닫기",
+    rentReceiver: "렌트 수령 주소",
+    enterRentReceiver: "렌트를 받을 주소 입력",
+    closing: "닫는 중...",
+    closeSuccess: "토큰 계정이 성공적으로 닫혔습니다",
+    closeError: "토큰 계정 닫기 실패",
+    burnAndCloseConfirm:
+      "모든 토큰을 소각하고 계정을 닫습니다. 계속하시겠습니까?",
   },
 };

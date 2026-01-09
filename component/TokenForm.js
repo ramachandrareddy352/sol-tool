@@ -55,7 +55,7 @@ export default function TokenForm() {
   const wallet = useWallet();
   const { solToolProgram, feeConfigPda } = useSolToolAnchorProgram();
   const { language } = useLanguage();
-  const { currentNetwork } = useNetwork();
+  const { currentNetwork, network } = useNetwork();
   const t = translations[language];
 
   const fileInputRef = useRef(null);
@@ -66,7 +66,6 @@ export default function TokenForm() {
     createTokenFee: 0.1,
     modifyCreatorInfoFee: 0.1,
     customTokenAddressFee: 0.1,
-    accountDeleteRefundFee: 0.1,
     revokeMintAuthorityFee: 0.1,
     revokeFreezeAuthorityFee: 0.1,
     revokeMetadataAuthorityFee: 0.1,
@@ -109,10 +108,6 @@ export default function TokenForm() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedMint, setGeneratedMint] = useState(null);
 
-  const [deletion, setDeletion] = useState(true);
-  const [activeOption, setActiveOption] = useState("sol");
-  const [customRefundAddress, setCustomRefundAddress] = useState("");
-
   const resetAllStates = () => {
     // Image & basic token info
     setImage(null);
@@ -150,11 +145,6 @@ export default function TokenForm() {
     setSuffix("");
     setIsGenerating(false);
     setGeneratedMint(null);
-
-    // Close account options
-    setDeletion(true);
-    setActiveOption("owner");
-    setCustomRefundAddress("");
   };
 
   // Dedicated connection for SPL token queries
@@ -172,6 +162,7 @@ export default function TokenForm() {
 
   // Fetch fees from on-chain FeeConfig
   useEffect(() => {
+    console.log(network);
     const fetchFees = async () => {
       if (!solToolProgram) {
         console.warn("SolTool program not loaded – using defaults");
@@ -189,8 +180,6 @@ export default function TokenForm() {
             Number(account.modifyCreatorInfoFee) / 1_000_000_000,
           customTokenAddressFee:
             Number(account.customTokenAddressFee) / 1_000_000_000,
-          accountDeleteRefundFee:
-            Number(account.accountDeleteRefundFee) / 1_000_000_000,
           revokeMintAuthorityFee:
             Number(account.revokeMintAuthorityFee) / 1_000_000_000,
           revokeFreezeAuthorityFee:
@@ -205,13 +194,12 @@ export default function TokenForm() {
       }
     };
     fetchFees();
-  }, [solToolProgram]);
+  }, [solToolProgram, currentNetwork, network]);
 
   const totalFee =
     fees.createTokenFee +
     (advanceSwitch ? fees.modifyCreatorInfoFee : 0) +
     (showPersonal ? fees.customTokenAddressFee : 0) +
-    (deletion ? fees.accountDeleteRefundFee : 0) +
     (mintAuth ? fees.revokeMintAuthorityFee : 0) +
     (freeze ? fees.revokeFreezeAuthorityFee : 0) +
     (update ? fees.revokeMetadataAuthorityFee : 0);
@@ -457,26 +445,6 @@ export default function TokenForm() {
         );
       }
 
-      if (deletion && activeOption !== "owner" && supply > 0 && tokenAccount) {
-        let closeAuth;
-        if (activeOption === "sol") closeAuth = feeConfigPda;
-        else if (activeOption === "token") {
-          if (creators.length === 0)
-            throw new Error("No creator for token refund");
-          closeAuth = creators[0].address;
-        } else if (activeOption === "custom") {
-          closeAuth = publicKey(customRefundAddress.trim());
-        }
-        txBuilder = txBuilder.add(
-          setAuthority(umi, {
-            owned: tokenAccount[0],
-            owner: umi.identity,
-            authorityType: AuthorityType.CloseAccount,
-            newAuthority: closeAuth,
-          })
-        );
-      }
-
       await txBuilder.sendAndConfirm(umi);
 
       const mintAddress = mintSigner.publicKey.toString();
@@ -567,67 +535,99 @@ export default function TokenForm() {
                 tooltip={t?.decimalTooltip}
                 required
               />
+
               <input
                 type="number"
-                value={decimals}
+                inputMode="numeric"
+                step="1"
                 min={1}
                 max={12}
+                value={decimals}
                 onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (v < 1 || v > 12) toast.error(t?.decimalError);
-                  else setDecimals(v);
-                }}
-                className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
-              />
-              <p className="text-xs text-gray-500 mt-1">{t?.decimaldesc}</p>
-            </div>
-            <div className="flex flex-col">
-              <TooltipLabel label={t?.supply} tooltip={t?.supplyTooltip} />
-              <input
-                type="number"
-                min="0"
-                step={1}
-                value={supply}
-                onChange={(e) => {
-                  const rawValue = e.target.value;
-                  if (rawValue === "") {
-                    setSupply(0);
+                  const raw = e.target.value;
+
+                  // Allow empty while typing
+                  if (raw === "") return;
+
+                  // Reject floats
+                  if (!Number.isInteger(Number(raw))) {
+                    toast.error(
+                      t?.decimalIntegerOnly || "Decimals must be an integer"
+                    );
                     return;
                   }
 
-                  const newSupply = Number(rawValue);
+                  const value = Number(raw);
 
-                  // Prevent negative numbers
-                  if (newSupply < 0) {
+                  if (value < 1 || value > 12) {
+                    toast.error(
+                      t?.decimalError || "Decimals must be between 1 and 12"
+                    );
+                    return;
+                  }
+
+                  setDecimals(value);
+                }}
+                className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+              />
+
+              <p className="text-xs text-gray-500 mt-1">{t?.decimaldesc}</p>
+            </div>
+
+            {/* ---------------- SUPPLY ---------------- */}
+
+            <div className="flex flex-col">
+              <TooltipLabel label={t?.supply} tooltip={t?.supplyTooltip} />
+
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={supply}
+                onChange={(e) => {
+                  const rawValue = e.target.value;
+
+                  if (rawValue === "") {
+                    setSupply("");
+                    return;
+                  }
+
+                  const numericValue = Number(rawValue);
+
+                  if (Number.isNaN(numericValue) || numericValue < 0) {
                     toast.error(
                       t?.supplyPositive || "Supply must be a positive number"
                     );
                     return;
                   }
 
-                  // Calculate total units: supply * 10^decimals
                   try {
-                    const totalUnits =
-                      BigInt(newSupply) * 10n ** BigInt(decimals);
                     const U64_MAX = 18_446_744_073_709_551_615n;
 
+                    // Convert float supply → smallest units
+                    const multiplier = 10 ** decimals;
+                    const totalUnits = BigInt(
+                      Math.floor(numericValue * multiplier)
+                    );
+
                     if (totalUnits > U64_MAX) {
+                      const maxSupply = Number(U64_MAX) / multiplier;
                       toast.error(
                         t?.supplyTooLarge ||
-                          `Maximum supply with ${decimals} decimals is ${Math.floor(
-                            Number(U64_MAX / 10n ** BigInt(decimals))
-                          )}`
+                          `Maximum supply with ${decimals} decimals is ${maxSupply}`
                       );
                       return;
                     }
-                    setSupply(newSupply);
-                  } catch (err) {
+
+                    setSupply(numericValue);
+                  } catch {
                     toast.error(t?.invalidSupply || "Invalid supply value");
                   }
                 }}
-                placeholder={t?.supplydesc || "e.g., 1000000000"}
+                placeholder={t?.supplydesc || "e.g., 1000000.5"}
                 className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
               />
+
               <p className="text-xs text-gray-500 mt-1">{t?.supplydesc}</p>
             </div>
           </div>
@@ -801,10 +801,10 @@ export default function TokenForm() {
                   <span className="slider"></span>
                 </label>
               </div>
+              <p className="text-sm text-gray-500">{t?.modifyCreatorDesc}</p>
             </div>
             {advanceSwitch && (
               <div className="mt-6 flex flex-col gap-5">
-                <p className="text-sm text-gray-500">{t?.modifyCreatorDesc}</p>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-semibold text-gray-700">
@@ -1117,75 +1117,6 @@ export default function TokenForm() {
               <div className="bg-[#fff9df] mt-4 p-3 rounded-xl flex gap-2 items-center text-sm">
                 <FaRegClock /> {t?.paraprocess}
               </div>
-            </>
-          )}
-        </div>
-
-        {/* Account Deletion */}
-        <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm my-8">
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-xl font-bold">🗑️ {t?.accdel}</h2>
-
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-[#02CCE6]">
-                  +{fees.accountDeleteRefundFee} SOL
-                </span>
-
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={deletion}
-                    onChange={() => setDeletion(!deletion)}
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
-            </div>
-
-            {/* Description below */}
-            <p className="text-sm text-gray-600">{t?.accdesc}</p>
-          </div>
-
-          {deletion && (
-            <>
-              <div className="grid md:grid-cols-4 gap-4">
-                {["sol", "token", "owner", "custom"].map((opt) => (
-                  <div
-                    key={opt}
-                    className="flex items-center justify-between border rounded-xl p-3"
-                  >
-                    <span className="text-sm font-semibold">
-                      {opt === "sol"
-                        ? t?.soltool
-                        : opt === "token"
-                        ? t?.tokenCreator
-                        : opt === "owner"
-                        ? t?.accOwner
-                        : t?.customAddress}
-                    </span>
-                    <label className="switch-2">
-                      <input
-                        type="checkbox"
-                        checked={activeOption === opt}
-                        onChange={() =>
-                          setActiveOption(activeOption === opt ? "" : opt)
-                        }
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-                ))}
-              </div>
-              {activeOption === "custom" && (
-                <input
-                  type="text"
-                  value={customRefundAddress}
-                  onChange={(e) => setCustomRefundAddress(e.target.value)}
-                  placeholder={t?.enadd}
-                  className="mt-4 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#02CCE6]"
-                />
-              )}
             </>
           )}
         </div>
