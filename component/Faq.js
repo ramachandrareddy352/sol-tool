@@ -124,7 +124,7 @@ const Faq = () => {
         <div className="mt-6 rounded-2xl overflow-hidden border shadow-sm">
           <iframe
             className="w-full aspect-video"
-            src="https://www.youtube.com/embed/4hlYjUWQUo8?controls=1"
+            src="https://www.youtube-nocookie.com/embed/4hlYjUWQUo8?controls=1"
             title="YouTube video"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
