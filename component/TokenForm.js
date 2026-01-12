@@ -84,6 +84,8 @@ export default function TokenForm() {
   const [decimals, setDecimals] = useState(6);
   const [supply, setSupply] = useState("");
   const [description, setDescription] = useState("");
+  const [decimalError, setDecimalError] = useState(null);
+  const [supplyError, setSupplyError] = useState(null);
 
   const [website, setWebsite] = useState("");
   const [twitter, setTwitter] = useState("");
@@ -111,6 +113,11 @@ export default function TokenForm() {
 
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const inputClass = (hasError) =>
+    `border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
+      hasError ? "border-red-500 focus:ring-red-400" : "border-[#E6E8EC]"
+    }`;
 
   const resetAllStates = () => {
     // Image & basic token info
@@ -556,7 +563,6 @@ export default function TokenForm() {
 
               <input
                 type="number"
-                inputMode="numeric"
                 step="1"
                 min={1}
                 max={12}
@@ -564,12 +570,12 @@ export default function TokenForm() {
                 onChange={(e) => {
                   const raw = e.target.value;
 
-                  // Allow empty while typing
-                  if (raw === "") return;
+                  if (raw === "") {
+                    setDecimalError("Decimals is required");
+                  }
 
-                  // Reject floats
                   if (!Number.isInteger(Number(raw))) {
-                    toast.error(
+                    setDecimalError(
                       t?.decimalIntegerOnly || "Decimals must be an integer"
                     );
                     return;
@@ -578,56 +584,61 @@ export default function TokenForm() {
                   const value = Number(raw);
 
                   if (value < 1 || value > 12) {
-                    toast.error(
+                    setDecimalError(
                       t?.decimalError || "Decimals must be between 1 and 12"
                     );
-                    return;
                   }
 
+                  if (value >= 1 && value <= 12) {
+                    setDecimalError(null);
+                  }
                   setDecimals(value);
                 }}
-                className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+                className={inputClass(!!decimalError)}
               />
+
+              {decimalError && (
+                <p className="text-xs text-red-600 mt-1">{decimalError}</p>
+              )}
 
               <p className="text-xs text-gray-500 mt-1">{t?.decimaldesc}</p>
             </div>
 
             {/* ---------------- SUPPLY ---------------- */}
-
             <div className="flex flex-col">
               <TooltipLabel label={t?.supply} tooltip={t?.supplyTooltip} />
 
               <input
-                type="number"
-                min="0"
-                step="any"
+                type="text"
                 value={supply}
                 onChange={(e) => {
                   const rawValue = e.target.value;
 
-                  // Allow empty input
+                  // 1️⃣ Always update supply
+                  setSupply(rawValue);
+
+                  // 2️⃣ Empty input → no error
                   if (rawValue === "") {
-                    setSupply("");
+                    setSupplyError(null);
                     return;
                   }
 
-                  // Reject invalid numbers
+                  // 3️⃣ Invalid format
                   if (!/^\d*\.?\d*$/.test(rawValue)) {
-                    toast.error(t?.invalidSupply || "Invalid supply value");
+                    setSupplyError(t?.invalidSupply || "Invalid supply value");
                     return;
                   }
 
-                  // Prevent more decimals than allowed
+                  // 4️⃣ Decimal length check
                   const [, fraction = ""] = rawValue.split(".");
                   if (fraction.length > decimals) {
-                    toast.error(
-                      t?.supplyDecimalsExceeded ||
-                        `Supply can have at most ${decimals} decimals`
+                    setSupplyError(
+                      `Supply can have at most ${decimals} decimals`
                     );
                     return;
                   }
 
-                  // Convert to base units for validation
+                  // 5️⃣ Max u64 check
                   try {
                     const whole = rawValue.split(".")[0] || "0";
                     const frac = (rawValue.split(".")[1] || "")
@@ -638,21 +649,26 @@ export default function TokenForm() {
                     const U64_MAX = 18_446_744_073_709_551_615n;
 
                     if (baseUnits > U64_MAX) {
-                      toast.error(
-                        t?.supplyTooLarge ||
-                          `Supply too large for ${decimals} decimals`
+                      setSupplyError(
+                        t?.supplyTooLarge || "Supply value exceeds max limit"
                       );
                       return;
                     }
-
-                    setSupply(rawValue);
                   } catch {
-                    toast.error(t?.invalidSupply || "Invalid supply value");
+                    setSupplyError(t?.invalidSupply || "Invalid supply value");
+                    return;
                   }
+
+                  // 6️⃣ Valid value
+                  setSupplyError(null);
                 }}
                 placeholder={t?.supplydesc || "e.g., 1000000.5"}
-                className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+                className={inputClass(!!supplyError)}
               />
+
+              {supplyError && (
+                <p className="text-xs text-red-600 mt-1">{supplyError}</p>
+              )}
 
               <p className="text-xs text-gray-500 mt-1">{t?.supplydesc}</p>
             </div>
@@ -829,64 +845,71 @@ export default function TokenForm() {
               </div>
               <p className="text-sm text-gray-500">{t?.modifyCreatorDesc}</p>
             </div>
-            {advanceSwitch && (
-              <div className="mt-6 flex flex-col gap-5">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-gray-700">
-                      🏷️ {t?.creatorName}{" "}
-                      {!removeCreator ? (
-                        <sup className="text-red-500 font-bold">*</sup>
-                      ) : null}
-                    </label>
-                    <input
-                      type="text"
-                      value={creatorName}
-                      disabled={removeCreator}
-                      onChange={(e) => setCreatorName(e.target.value)}
-                      placeholder={t?.createNamePlace}
-                      className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
-                        removeCreator ? "bg-gray-200 cursor-not-allowed" : ""
-                      }`}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-gray-700">
-                      🌐 {t?.creatorWeb}{" "}
-                      {!removeCreator ? (
-                        <sup className="text-red-500 font-bold">*</sup>
-                      ) : null}
-                    </label>
-                    <input
-                      type="url"
-                      value={creatorWeb}
-                      disabled={removeCreator}
-                      onChange={(e) => setCreatorWeb(e.target.value)}
-                      placeholder={t?.createWebPlace}
-                      className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
-                        removeCreator ? "bg-gray-200 cursor-not-allowed" : ""
-                      }`}
-                    />
-                  </div>
-                </div>
+
+            <div className="mt-6 flex flex-col gap-5">
+              <div className="grid md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-semibold text-gray-700">
-                    🔑 {t?.creatorAddress}{" "}
+                    🏷️ {t?.creatorName}{" "}
                     {!removeCreator ? (
                       <sup className="text-red-500 font-bold">*</sup>
                     ) : null}
                   </label>
                   <input
                     type="text"
-                    value={creatorAddress}
-                    disabled={removeCreator}
-                    onChange={(e) => setCreatorAddress(e.target.value)}
-                    placeholder={t?.enterAddress}
+                    value={creatorName}
+                    disabled={removeCreator || !advanceSwitch}
+                    onChange={(e) => setCreatorName(e.target.value)}
+                    placeholder={t?.createNamePlace}
                     className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
-                      removeCreator ? "bg-gray-200 cursor-not-allowed" : ""
+                      removeCreator || !advanceSwitch
+                        ? "bg-gray-200 cursor-not-allowed"
+                        : ""
                     }`}
                   />
                 </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-semibold text-gray-700">
+                    🌐 {t?.creatorWeb}{" "}
+                    {!removeCreator ? (
+                      <sup className="text-red-500 font-bold">*</sup>
+                    ) : null}
+                  </label>
+                  <input
+                    type="url"
+                    value={creatorWeb}
+                    disabled={removeCreator || !advanceSwitch}
+                    onChange={(e) => setCreatorWeb(e.target.value)}
+                    placeholder={t?.createWebPlace}
+                    className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
+                      removeCreator || !advanceSwitch
+                        ? "bg-gray-200 cursor-not-allowed"
+                        : ""
+                    }`}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-semibold text-gray-700">
+                  🔑 {t?.creatorAddress}{" "}
+                  {!removeCreator ? (
+                    <sup className="text-red-500 font-bold">*</sup>
+                  ) : null}
+                </label>
+                <input
+                  type="text"
+                  value={creatorAddress}
+                  disabled={removeCreator || !advanceSwitch}
+                  onChange={(e) => setCreatorAddress(e.target.value)}
+                  placeholder={t?.enterAddress}
+                  className={`border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
+                    removeCreator || !advanceSwitch
+                      ? "bg-gray-200 cursor-not-allowed"
+                      : ""
+                  }`}
+                />
+              </div>
+              {advanceSwitch === true && (
                 <div className="flex items-center gap-4 pt-2">
                   <label className="switch">
                     <input
@@ -909,8 +932,8 @@ export default function TokenForm() {
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
@@ -1159,7 +1182,14 @@ export default function TokenForm() {
             type="button"
             onClick={createSPLToken}
             disabled={
-              creatingToken || !name || !symbol || !image || !description
+              creatingToken ||
+              !name ||
+              !symbol ||
+              !image ||
+              !description ||
+              supplyError ||
+              decimals > 12 ||
+              decimals < 1
             }
             className="bg-[#02CCE6] px-10 py-4 rounded-2xl text-white text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-600 transition"
           >

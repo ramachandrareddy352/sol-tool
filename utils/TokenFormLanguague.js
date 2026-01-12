@@ -128,8 +128,29 @@ export const tokenFormTranslations = {
     walletApprovalText:
       " wallet approval transactions, depending on the options you select (metadata, minting, authority revocations, etc.). In addition to the SolTool service fee, a small Solana network (gas) fee will be charged for each transaction. Please ensure your wallet has sufficient SOL balance before proceeding.",
     decimalIntegerOnly: "Decimals must be an integer",
+    invalidSupplyFormat: "Invalid supply format",
+    supplyDecimalsExceeded: (d) => `Supply can have at most ${d} decimals`,
+    supplyTooLarge: "Supply too large for selected decimals",
+    invalidSupplyValue: "Invalid supply value",
+
+    decimalsNotInteger: "Decimals must be an integer",
+    decimalsOutOfRange: "Decimals must be between 1 and 12",
+    supplyExceedsWithDecimals:
+      "With this decimals value, supply exceeds the allowed limit",
+    invalidSupplyForDecimals: "Invalid supply for selected decimals",
   },
   ko: {
+    invalidSupplyFormat: "공급량 형식이 올바르지 않습니다",
+    supplyDecimalsExceeded: (d) => `공급량은 소수점 ${d}자리까지만 허용됩니다`,
+    supplyTooLarge: "선택한 소수점 기준에서 공급량이 너무 큽니다",
+    invalidSupplyValue: "유효하지 않은 공급량 값입니다",
+
+    decimalsNotInteger: "소수점 자릿수는 정수여야 합니다",
+    decimalsOutOfRange: "소수점 자릿수는 1에서 12 사이여야 합니다",
+    supplyExceedsWithDecimals:
+      "이 소수점 자릿수에서는 공급량이 허용 범위를 초과합니다",
+    invalidSupplyForDecimals:
+      "선택한 소수점 자릿수에 대해 공급량이 유효하지 않습니다",
     decimalIntegerOnly: "소수점 자릿수는 정수여야 합니다",
     note: "안내: ",
     tokenCreationInvolves: " 토큰 생성 과정에는 ",
