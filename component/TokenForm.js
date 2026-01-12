@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import Image from "next/image";
@@ -81,7 +82,7 @@ export default function TokenForm() {
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
   const [decimals, setDecimals] = useState(6);
-  const [supply, setSupply] = useState(0);
+  const [supply, setSupply] = useState("");
   const [description, setDescription] = useState("");
 
   const [website, setWebsite] = useState("");
@@ -107,6 +108,9 @@ export default function TokenForm() {
   const [suffix, setSuffix] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedMint, setGeneratedMint] = useState(null);
+
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const resetAllStates = () => {
     // Image & basic token info
@@ -145,6 +149,12 @@ export default function TokenForm() {
     setSuffix("");
     setIsGenerating(false);
     setGeneratedMint(null);
+  };
+
+  const supplyToBaseUnits = (value, decimals) => {
+    const [whole = "0", fraction = ""] = value.split(".");
+    const paddedFraction = fraction.padEnd(decimals, "0").slice(0, decimals);
+    return BigInt(whole + paddedFraction);
   };
 
   // Dedicated connection for SPL token queries
@@ -387,7 +397,8 @@ export default function TokenForm() {
       );
 
       let tokenAccount = null;
-      if (supply > 0) {
+      if (supply && supply !== "0") {
+        const amountInBaseUnits = supplyToBaseUnits(supply, decimals);
         tokenAccount = findAssociatedTokenPda(umi, {
           mint: mintSigner.publicKey,
           owner: umi.identity.publicKey,
@@ -406,7 +417,7 @@ export default function TokenForm() {
             mintV1(umi, {
               mint: mintSigner.publicKey,
               authority: umi.identity,
-              amount: BigInt(supply) * 10n ** BigInt(decimals),
+              amount: amountInBaseUnits,
               tokenOwner: umi.identity.publicKey,
               token: tokenAccount[0],
               tokenStandard: TokenStandard.Fungible,
@@ -454,7 +465,14 @@ export default function TokenForm() {
       resetAllStates();
     } catch (error) {
       console.error(error);
-      toast.error(t?.tokenCreateFailed);
+      let message = t?.tokenCreateFailed || "Token creation failed";
+
+      if (error instanceof Error && error.message) {
+        message = error.message;
+      }
+
+      setErrorMessage(message);
+      setErrorModalOpen(true);
     } finally {
       setCreationStep(0);
       setCreatingToken(false);
@@ -587,39 +605,47 @@ export default function TokenForm() {
                 onChange={(e) => {
                   const rawValue = e.target.value;
 
+                  // Allow empty input
                   if (rawValue === "") {
                     setSupply("");
                     return;
                   }
 
-                  const numericValue = Number(rawValue);
+                  // Reject invalid numbers
+                  if (!/^\d*\.?\d*$/.test(rawValue)) {
+                    toast.error(t?.invalidSupply || "Invalid supply value");
+                    return;
+                  }
 
-                  if (Number.isNaN(numericValue) || numericValue < 0) {
+                  // Prevent more decimals than allowed
+                  const [, fraction = ""] = rawValue.split(".");
+                  if (fraction.length > decimals) {
                     toast.error(
-                      t?.supplyPositive || "Supply must be a positive number"
+                      t?.supplyDecimalsExceeded ||
+                        `Supply can have at most ${decimals} decimals`
                     );
                     return;
                   }
 
+                  // Convert to base units for validation
                   try {
+                    const whole = rawValue.split(".")[0] || "0";
+                    const frac = (rawValue.split(".")[1] || "")
+                      .padEnd(decimals, "0")
+                      .slice(0, decimals);
+
+                    const baseUnits = BigInt(whole + frac);
                     const U64_MAX = 18_446_744_073_709_551_615n;
 
-                    // Convert float supply → smallest units
-                    const multiplier = 10 ** decimals;
-                    const totalUnits = BigInt(
-                      Math.floor(numericValue * multiplier)
-                    );
-
-                    if (totalUnits > U64_MAX) {
-                      const maxSupply = Number(U64_MAX) / multiplier;
+                    if (baseUnits > U64_MAX) {
                       toast.error(
                         t?.supplyTooLarge ||
-                          `Maximum supply with ${decimals} decimals is ${maxSupply}`
+                          `Supply too large for ${decimals} decimals`
                       );
                       return;
                     }
 
-                    setSupply(numericValue);
+                    setSupply(rawValue);
                   } catch {
                     toast.error(t?.invalidSupply || "Invalid supply value");
                   }
@@ -1146,11 +1172,11 @@ export default function TokenForm() {
           {/* Stepper */}
           <div className="flex items-center justify-between mb-6 relative">
             {/* Background line */}
-            <div className="absolute top-5 left-0 w-full h-[3px] bg-gray-200 rounded-full" />
+            <div className="absolute top-5 left-0 w-full h-0.75 bg-gray-200 rounded-full" />
 
             {/* Active progress line */}
             <div
-              className="absolute top-5 left-0 h-[3px] rounded-full
+              className="absolute top-5 left-0 h-0.75 rounded-full
                  bg-linear-to-r from-cyan-400 to-[#02CCE6]
                  transition-all duration-700 ease-out shadow-[0_0_10px_rgba(2,204,230,0.6)]"
               style={{ width: `${(creationStep / 3) * 100}%` }}
@@ -1278,9 +1304,9 @@ export default function TokenForm() {
 
                     <a
                       href={
-                        currentNetwork.name === "mainnet"
-                          ? `https://solscan.io/token/${createdMintAddress}`
-                          : `https://solscan.io/token/${createdMintAddress}?cluster=devnet`
+                        currentNetwork.name === "devnet"
+                          ? `https://explorer.solana.com/address/${createdMintAddress}?cluster=devnet`
+                          : `https://explorer.solana.com/address/${createdMintAddress}`
                       }
                       target="_blank"
                       rel="noopener noreferrer"
@@ -1293,6 +1319,69 @@ export default function TokenForm() {
                       type="button"
                       className="px-8 py-3 bg-[#02CCE6] text-white font-bold rounded-xl hover:bg-cyan-600 transition"
                       onClick={() => setSuccessModalOpen(false)}
+                    >
+                      OK
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Error Modal */}
+      <Transition appear show={errorModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setErrorModalOpen(false)}
+        >
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-transparent backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-8 text-left align-middle shadow-xl transition-all">
+                  <div className="flex flex-col items-center">
+                    {/* Error Icon */}
+                    <TiCancel className="h-16 w-16 text-red-500 mb-4" />
+
+                    <Dialog.Title
+                      as="h3"
+                      className="text-2xl font-bold text-gray-900 mb-4"
+                    >
+                      {t?.tokenCreateFailed || "Token Creation Failed"}
+                    </Dialog.Title>
+
+                    <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                      <p className="text-sm text-red-700 wrap-break-word">
+                        {errorMessage}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="px-8 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition"
+                      onClick={() => setErrorModalOpen(false)}
                     >
                       OK
                     </button>

@@ -176,7 +176,7 @@ const MinForm = () => {
   }[language];
 
   const LoadingPage = () => (
-    <div className="flex items-center justify-center min-h-[400px]">
+    <div className="flex items-center justify-center min-h-100">
       <div className="text-center">
         <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-[#02CCE6] mx-auto"></div>
         <p className="mt-6 text-lg font-medium text-gray-700">{t.loadingFee}</p>
@@ -653,7 +653,7 @@ const MinForm = () => {
                   <button
                     onClick={() => performCloseAccount(true)}
                     disabled={burnAndClosing}
-                    className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white py-3 rounded-xl font-bold disabled:opacity-50"
+                    className="w-full bg-linear-to-r from-red-500 to-orange-500 text-white py-3 rounded-xl font-bold disabled:opacity-50"
                   >
                     {burnAndClosing ? t.closing : t.burnAndClose}
                   </button>
