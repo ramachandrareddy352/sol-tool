@@ -449,7 +449,7 @@ export default function AdminPage() {
 const adminTranslations = {
   en: {
     adminPanel: "Admin Panel",
-    solToolAdminPanel: "Sol Tool Admin Panel",
+    solToolAdminPanel: "SOL Maker Admin Panel",
     collectedFees: "Collected Fees",
     availableBalance: "Available Balance",
     feeConfigPda: "Fee Config PDA",
@@ -498,7 +498,7 @@ const adminTranslations = {
   },
   ko: {
     adminPanel: "관리자 패널",
-    solToolAdminPanel: "Sol Tool 관리자 패널",
+    solToolAdminPanel: "SOL Maker 관리자 패널",
     collectedFees: "수집된 수수료",
     availableBalance: "사용 가능한 잔액",
     feeConfigPda: "수수료 설정 PDA",

@@ -24,6 +24,7 @@ export function LanguageProvider({ children }) {
       meta: "Meta",
       owner: "Ownership",
       connectWallet: "Connect Wallet",
+      development: "Development",
     },
     ko: {
       creator: "창작자",
@@ -32,6 +33,7 @@ export function LanguageProvider({ children }) {
       meta: "메타",
       owner: "소유권",
       connectWallet: "지갑 연결",
+      development: "개발 모드",
     },
   };
 

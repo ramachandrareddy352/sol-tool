@@ -10,7 +10,7 @@ const FeeModal = () => {
     en: {
       title: "Use Priority Fees",
       description:
-        "Modify the fees you pay within SOL TOOL in order to avoid transaction errors due to Solana congestion.",
+        "Modify the fees you pay within SOL Maker in order to avoid transaction errors due to Solana congestion.",
       priorityLevel: "Priority Level",
       fast: "Fast 1x",
       turbo: "Turbo 2x",
@@ -20,7 +20,7 @@ const FeeModal = () => {
     ko: {
       title: "우선 요금 사용",
       description:
-        "Solana 네트워크 혼잡으로 인한 거래 오류를 방지하기 위해 SOL TOOL에서 지불하는 수수료를 조정할 수 있습니다.",
+        "Solana 네트워크 혼잡으로 인한 거래 오류를 방지하기 위해 SOL Maker에서 지불하는 수수료를 조정할 수 있습니다.",
       priorityLevel: "우선 순위 수준",
       fast: "빠름 1x",
       turbo: "터보 2x",

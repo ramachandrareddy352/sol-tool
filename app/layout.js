@@ -5,7 +5,7 @@ import SolanaWalletProvider from "../utils/WalletProvider";
 import "./globals.css";
 
 export const metadata = {
-  title: "Sol tool",
+  title: "SOL Maker",
   description:
     "A simple tool to create your SPL meme tokens with advance features and manage ownership, minting, feezing and metadata of your token. Developed by T.Rama Chandra Reddy",
 };

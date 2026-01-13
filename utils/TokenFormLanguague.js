@@ -28,7 +28,7 @@ export const tokenFormTranslations = {
     advancedOptions: "Advanced Options",
     modifyCreator: "Modify Creator Information",
     modifyCreatorDesc:
-      "Change the information of the creator in the metadata, by default it is SOL TOOL.",
+      "Change the information of the creator in the metadata, by default it is SOL Maker.",
     revokeAuthorities: "Revoke Authorities",
     revokeFreeze: "Revoke Freeze",
     revokeFreezeDesc:
@@ -61,11 +61,11 @@ export const tokenFormTranslations = {
     paraprocess:
       "Processing time! in some cases, generating a 4-characher address may take up to 1 hour.",
     nameTooltip:
-      "Token name is visible in metadata and try to be unique and ≤ 50 characters.",
-    nameExceedLengthError: "Token name cannot exceed 50 characters.",
+      "Token name is visible in metadata and try to be unique and ≤ 32 bytes.",
+    nameExceedLengthError: "Token name cannot exceed 32 bytes.",
     symbolTooltip:
-      "Token symbol is visible in metadata and try to be unique and ≤ 10 characters.",
-    symbolExceedLengthError: "Token symbol cannot exceed 10 characters",
+      "Token symbol is visible in metadata and try to be unique and ≤ 10 bytes.",
+    symbolExceedLengthError: "Token symbol cannot exceed 10 bytes",
     decimalTooltip:
       "If a token has 6 decimals, then 1 token = 1,000,000 smallest units.",
     decimalError: "Token decimals should between 1-12",
@@ -87,7 +87,7 @@ export const tokenFormTranslations = {
     accdel: "Account Deletion Fee Refund Designation",
     accdesc:
       "When a token account is deleted from the user's wallet, specify the wallet to which the rent will be refunded",
-    soltool: "SOL Tool",
+    soltool: "SOL Maker",
     accOwner: "Account owner",
     tokenCreator: "Token Creator",
     customAddress: "Custom Address",
@@ -126,7 +126,7 @@ export const tokenFormTranslations = {
     note: "NOTE: ",
     tokenCreationInvolves: " Token creation involves ",
     walletApprovalText:
-      " wallet approval transactions, depending on the options you select (metadata, minting, authority revocations, etc.). In addition to the SolTool service fee, a small Solana network (gas) fee will be charged for each transaction. Please ensure your wallet has sufficient SOL balance before proceeding.",
+      " wallet approval transactions, depending on the options you select (metadata, minting, authority revocations, etc.). In addition to the SOL Maker service fee, a small Solana network (gas) fee will be charged for each transaction. Please ensure your wallet has sufficient SOL balance before proceeding.",
     decimalIntegerOnly: "Decimals must be an integer",
     invalidSupplyFormat: "Invalid supply format",
     supplyDecimalsExceeded: (d) => `Supply can have at most ${d} decimals`,
@@ -155,7 +155,7 @@ export const tokenFormTranslations = {
     note: "안내: ",
     tokenCreationInvolves: " 토큰 생성 과정에는 ",
     walletApprovalText:
-      " 선택한 옵션(메타데이터, 민팅, 권한 해제 등)에 따라 3~6회의 지갑 승인 트랜잭션이 필요합니다. SolTool 서비스 수수료 외에도 각 트랜잭션마다 소량의 Solana 네트워크(가스) 수수료가 부과됩니다. 진행하기 전에 지갑에 충분한 SOL 잔액이 있는지 확인해 주세요.",
+      " 선택한 옵션(메타데이터, 민팅, 권한 해제 등)에 따라 3~6회의 지갑 승인 트랜잭션이 필요합니다. SOL Maker 서비스 수수료 외에도 각 트랜잭션마다 소량의 Solana 네트워크(가스) 수수료가 부과됩니다. 진행하기 전에 지갑에 충분한 SOL 잔액이 있는지 확인해 주세요.",
     startStage: "시작",
     createStage: "생성 시작",
     uploadImageStage: "이미지 업로드",
@@ -187,7 +187,7 @@ export const tokenFormTranslations = {
     invalidRefundAddress: "유효하지 않은 사용자 정의 환불 주소입니다.",
     tokenCreateFailed: "토큰 생성에 실패했습니다.",
     tokenCreating: "토큰 생성 중...",
-    soltool: "SOL 도구",
+    soltool: "SOL Maker",
     tokenCreator: "토큰 생성자",
     customAddress: "사용자 정의 주소",
     accOwner: "계정 소유자",
@@ -212,9 +212,9 @@ export const tokenFormTranslations = {
     symbolExceedLengthError: "토큰 심볼은 10자를 초과할 수 없습니다.",
     symbolTooltip:
       "토큰 심볼은 메타데이터에 표시되며, 고유해야 하고 10자 이하여야 합니다.",
-    nameExceedLengthError: "토큰 이름은 50자를 초과할 수 없습니다.",
+    nameExceedLengthError: "토큰 이름은 32자를 초과할 수 없습니다.",
     nameTooltip:
-      "토큰 이름은 메타데이터에 표시되며, 고유해야 하고 50자 이하여야 합니다.",
+      "토큰 이름은 메타데이터에 표시되며, 고유해야 하고 32자 이하여야 합니다.",
     name: "이름:",
     enadd: "주소를 입력하세요",
     nameplace: "토큰 이름을 입력하세요",
@@ -242,7 +242,7 @@ export const tokenFormTranslations = {
     advancedOptions: "고급 옵션",
     modifyCreator: "창작자 정보 수정",
     modifyCreatorDesc:
-      "메타데이터에서 작성자의 정보를 변경합니다. 기본값은 SOL TOOL입니다.",
+      "메타데이터에서 작성자의 정보를 변경합니다. 기본값은 SOL Maker입니다.",
     revokeAuthorities: "권한 취소",
     revokeAuthoritiesDesc:
       "솔라나 토큰에는 3가지 권한이 있습니다: 동결 권한, 민트 권한, 업데이트 권한. 더 많은 투자자를 유치하려면 권한을 취소하세요.",

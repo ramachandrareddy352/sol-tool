@@ -88,6 +88,8 @@ export default function TokenForm() {
   const [description, setDescription] = useState("");
   const [decimalError, setDecimalError] = useState(null);
   const [supplyError, setSupplyError] = useState(null);
+  const [nameError, setNameError] = useState(null);
+  const [symbolError, setSymbolError] = useState(null);
 
   const [website, setWebsite] = useState("");
   const [twitter, setTwitter] = useState("");
@@ -184,7 +186,7 @@ export default function TokenForm() {
     console.log(network);
     const fetchFees = async () => {
       if (!solToolProgram) {
-        console.warn("SolTool program not loaded – using defaults");
+        console.warn("SolMaker program not loaded – using defaults");
         setLoadingFees(false);
         return;
       }
@@ -465,7 +467,12 @@ export default function TokenForm() {
         );
       }
 
-      await txBuilder.sendAndConfirm(umi);
+      await txBuilder.setLatestBlockhash(umi);
+      await txBuilder.sendAndConfirm(umi, {
+        send: {
+          skipPreflight: false,
+        },
+      });
 
       const mintAddress = mintSigner.publicKey.toString();
       setCreatedMintAddress(mintAddress);
@@ -519,6 +526,19 @@ export default function TokenForm() {
     return null;
   }
 
+  const getByteLength = (value) => new TextEncoder().encode(value).length;
+
+  // Remove commas
+  const unformatNumber = (value) => value.replace(/,/g, "");
+
+  // Add commas (supports decimals)
+  const formatNumber = (value) => {
+    if (!value) return "";
+    const [int, dec] = value.split(".");
+    const formattedInt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return dec !== undefined ? `${formattedInt}.${dec}` : formattedInt;
+  };
+
   // Loading screen
   if (loadingFees) {
     return (
@@ -555,38 +575,72 @@ export default function TokenForm() {
             🪙 {t?.tokenDetails}
           </h3>
           <div className="grid md:grid-cols-2 gap-6">
+            {/* ---------------- NAME ---------------- */}
             <div className="flex flex-col">
               <TooltipLabel label={t?.name} tooltip={t?.nameTooltip} required />
+
               <input
                 type="text"
                 value={name}
                 onChange={(e) => {
-                  const v = e.target.value.trim();
-                  if (v.length > 50) toast.error(t?.nameExceedLengthError);
-                  else setName(v);
+                  const value = e.target.value;
+
+                  const bytes = getByteLength(value);
+
+                  if (bytes > 32) {
+                    setNameError(
+                      t?.nameExceedLengthError || "Name must be within 32 bytes"
+                    );
+                  } else {
+                    setNameError(null);
+                  }
+                  setName(value);
                 }}
                 placeholder={t?.nameplace}
-                className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+                className={inputClass(!!nameError)}
               />
+
+              {nameError && (
+                <p className="text-xs text-red-600 mt-1">{nameError}</p>
+              )}
             </div>
+
+            {/* ---------------- SYMBOL ---------------- */}
             <div className="flex flex-col">
               <TooltipLabel
                 label={t?.symbol}
                 tooltip={t?.symbolTooltip}
                 required
               />
+
               <input
                 type="text"
                 value={symbol}
                 onChange={(e) => {
-                  const v = e.target.value.trim();
-                  if (v.length > 10) toast.error(t?.symbolExceedLengthError);
-                  else setSymbol(v);
+                  const value = e.target.value;
+
+                  const bytes = getByteLength(value);
+
+                  if (bytes > 10) {
+                    setSymbolError(
+                      t?.symbolExceedLengthError ||
+                        "Symbol must be within 10 bytes"
+                    );
+                  } else {
+                    setSymbolError(null);
+                  }
+                  setSymbol(value);
                 }}
                 placeholder={t?.symbolplace}
-                className="border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6]"
+                className={inputClass(!!symbolError)}
               />
+
+              {symbolError && (
+                <p className="text-xs text-red-600 mt-1">{symbolError}</p>
+              )}
             </div>
+
+            {/* ---------------- DECIMLAS ---------------- */}
             <div className="flex flex-col">
               <TooltipLabel
                 label={t?.decimals}
@@ -643,17 +697,38 @@ export default function TokenForm() {
               <input
                 type="text"
                 inputMode="decimal"
-                value={supply}
+                value={formatNumber(supply)}
                 onChange={(e) => {
-                  const value = e.target.value;
+                  const input = e.target;
+                  const cursorPos = input.selectionStart ?? 0;
 
-                  // allow only numbers and dot
-                  if (!/^\d*\.?\d*$/.test(value)) return;
+                  // Raw value without commas
+                  const rawValue = unformatNumber(input.value);
 
-                  setSupply(value);
-                  setSupplyError(validateSupply(value, decimals, t));
+                  // Allow only digits + optional dot
+                  if (!/^\d*\.?\d*$/.test(rawValue)) return;
+
+                  // Count commas before cursor
+                  const commasBefore = (
+                    input.value.slice(0, cursorPos).match(/,/g) || []
+                  ).length;
+
+                  // Update state
+                  setSupply(rawValue);
+                  setSupplyError(validateSupply(rawValue, decimals, t));
+
+                  // Restore cursor AFTER re-render
+                  requestAnimationFrame(() => {
+                    const formatted = formatNumber(rawValue);
+                    const newCommasBefore = (
+                      formatted.slice(0, cursorPos).match(/,/g) || []
+                    ).length;
+
+                    const newPos = cursorPos + (newCommasBefore - commasBefore);
+                    input.setSelectionRange(newPos, newPos);
+                  });
                 }}
-                placeholder={t?.supplydesc || "e.g., 1000000.5"}
+                placeholder={t?.supplydesc || "e.g., 1,000,000.5"}
                 className={inputClass(!!supplyError)}
               />
 
@@ -1179,6 +1254,8 @@ export default function TokenForm() {
             type="button"
             onClick={createSPLToken}
             disabled={
+              nameError ||
+              symbolError ||
               creatingToken ||
               !name ||
               !symbol ||

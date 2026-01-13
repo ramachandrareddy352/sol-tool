@@ -81,7 +81,7 @@ const Header = () => {
           <Link href="/" className="flex items-center gap-2">
             <img src="logo.png" className="w-7 h-7" alt="logo" />
             <h1 className="hidden sm:block text-2xl font-extrabold font-[Barlow_Condensed]">
-              Sol&nbsp;Tool
+              SOL&nbsp;Maker
             </h1>
           </Link>
         </div>
@@ -94,6 +94,7 @@ const Header = () => {
             { href: "/freezing", label: translations[language].freeze },
             { href: "/meta", label: translations[language].meta },
             { href: "/owner", label: translations[language].owner },
+            { href: "/development", label: translations[language].development },
           ].map(({ href, label }) => (
             <Link
               key={href}
@@ -111,9 +112,10 @@ const Header = () => {
         <div className="flex items-center gap-4 md:gap-5">
           {/* Development / Telegram */}
           <Link
-            href="/development"
+            href="https://t.me/mcret"
             className="text-gray-700 hover:text-[#02CCE6] transition"
             title="Development Support"
+            target="_blank"
           >
             <FaTelegram size={22} />
           </Link>
@@ -211,6 +213,10 @@ const Header = () => {
               { href: "/freezing", label: translations[language].freeze },
               { href: "/meta", label: translations[language].meta },
               { href: "/owner", label: translations[language].owner },
+              {
+                href: "/development",
+                label: translations[language].development,
+              },
             ].map(({ href, label }) => (
               <Link
                 key={href}
