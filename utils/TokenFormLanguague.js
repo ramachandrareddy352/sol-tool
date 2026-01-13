@@ -44,8 +44,8 @@ export const tokenFormTranslations = {
     totalFees: "Total Fees :",
     creatorName: "Creator Name:",
     creatorWeb: "Creator Website:",
-    createNamePlace: "CoinFactory",
-    createWebPlace: "https://coinfactory.app",
+    createNamePlace: "Enter Creator Name",
+    createWebPlace: "Enter Creator website",
     personalization: "Personalization",
     claim: "Claim a custom address",
     personalize:
@@ -259,8 +259,8 @@ export const tokenFormTranslations = {
     totalFees: "총 수수료 :",
     creatorName: "작성자 이름",
     creatorWeb: "제작자 웹사이트",
-    createNamePlace: "CoinFactory",
-    createWebPlace: "https://coinfactory.app",
+    createNamePlace: "제작자 이름을 입력하세요",
+    createWebPlace: "제작자 웹사이트를 입력하세요",
     personalization: "개인화",
     claim: "사용자 정의 주소 청구",
     personalize:

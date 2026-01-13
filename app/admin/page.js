@@ -67,7 +67,7 @@ export default function AdminPage() {
       setFeeConfig(account);
 
       const bal = await connection.getBalance(feeConfigPda);
-      setBalance(bal / LAMPORTS_PER_SOL);
+      setBalance((bal - 2000000) / LAMPORTS_PER_SOL);
 
       setFees({
         create_token_fee: Number(account.createTokenFee) / LAMPORTS_PER_SOL,
@@ -105,6 +105,10 @@ export default function AdminPage() {
     }
   };
 
+  function solToLamportsBN(sol) {
+    return new BN(Math.round(sol * LAMPORTS_PER_SOL));
+  }
+
   useEffect(() => {
     if (solToolProgram && feeConfigPda) {
       fetchData();
@@ -126,41 +130,35 @@ export default function AdminPage() {
     try {
       const tx = await solToolProgram.methods
         .updateFeeConfig({
-          createTokenFee: new BN(fees.create_token_fee * LAMPORTS_PER_SOL),
-          modifyCreatorInfoFee: new BN(
-            fees.modify_creator_info_fee * LAMPORTS_PER_SOL
+          createTokenFee: solToLamportsBN(fees.create_token_fee),
+          modifyCreatorInfoFee: solToLamportsBN(fees.modify_creator_info_fee),
+          customTokenAddressFee: solToLamportsBN(fees.custom_token_address_fee),
+          accountDeleteRefundFee: solToLamportsBN(
+            fees.account_delete_refund_fee
           ),
-          customTokenAddressFee: new BN(
-            fees.custom_token_address_fee * LAMPORTS_PER_SOL
+          revokeMintAuthorityFee: solToLamportsBN(
+            fees.revoke_mint_authority_fee
           ),
-          accountDeleteRefundFee: new BN(
-            fees.account_delete_refund_fee * LAMPORTS_PER_SOL
+          revokeFreezeAuthorityFee: solToLamportsBN(
+            fees.revoke_freeze_authority_fee
           ),
-          revokeMintAuthorityFee: new BN(
-            fees.revoke_mint_authority_fee * LAMPORTS_PER_SOL
+          revokeMetadataAuthorityFee: solToLamportsBN(
+            fees.revoke_metadata_authority_fee
           ),
-          revokeFreezeAuthorityFee: new BN(
-            fees.revoke_freeze_authority_fee * LAMPORTS_PER_SOL
+          updateMintAuthorityFee: solToLamportsBN(
+            fees.update_mint_authority_fee
           ),
-          revokeMetadataAuthorityFee: new BN(
-            fees.revoke_metadata_authority_fee * LAMPORTS_PER_SOL
+          updateFreezeAuthorityFee: solToLamportsBN(
+            fees.update_freeze_authority_fee
           ),
-          updateMintAuthorityFee: new BN(
-            fees.update_mint_authority_fee * LAMPORTS_PER_SOL
+          updateMetadataAuthorityFee: solToLamportsBN(
+            fees.update_metadata_authority_fee
           ),
-          updateFreezeAuthorityFee: new BN(
-            fees.update_freeze_authority_fee * LAMPORTS_PER_SOL
-          ),
-          updateMetadataAuthorityFee: new BN(
-            fees.update_metadata_authority_fee * LAMPORTS_PER_SOL
-          ),
-          mintTokensFee: new BN(fees.mint_tokens_fee * LAMPORTS_PER_SOL),
-          burnTokensFee: new BN(fees.burn_tokens_fee * LAMPORTS_PER_SOL),
-          freezeUserFee: new BN(fees.freeze_user_fee * LAMPORTS_PER_SOL),
-          unfreezeUserFee: new BN(fees.unfreeze_user_fee * LAMPORTS_PER_SOL),
-          updateMetadataFee: new BN(
-            fees.update_metadata_fee * LAMPORTS_PER_SOL
-          ),
+          mintTokensFee: solToLamportsBN(fees.mint_tokens_fee),
+          burnTokensFee: solToLamportsBN(fees.burn_tokens_fee),
+          freezeUserFee: solToLamportsBN(fees.freeze_user_fee),
+          unfreezeUserFee: solToLamportsBN(fees.unfreeze_user_fee),
+          updateMetadataFee: solToLamportsBN(fees.update_metadata_fee),
         })
         .accounts({
           owner: publicKey,
@@ -219,7 +217,7 @@ export default function AdminPage() {
 
     setWithdrawing(true);
     try {
-      const lamports = amount * LAMPORTS_PER_SOL;
+      const lamports = solToLamportsBN(amount);
       const tx = await solToolProgram.methods
         .withdrawFees(new BN(lamports)) // ← Wrap in BN
         .accounts({

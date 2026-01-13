@@ -52,6 +52,8 @@ import { useLanguage } from "@/app/Context/LanguageContext";
 import { useNetwork } from "@/app/Context/NetworkContext";
 import { useSolToolAnchorProgram } from "@/utils/fetch_fee_config";
 
+const U64_MAX = 18_446_744_073_709_551_615n;
+
 export default function TokenForm() {
   const wallet = useWallet();
   const { solToolProgram, feeConfigPda } = useSolToolAnchorProgram();
@@ -146,9 +148,9 @@ export default function TokenForm() {
     setShowPersonal(false);
 
     // Creator metadata
-    setCreatorName("");
-    setCreatorWeb("");
-    setCreatorAddress("");
+    setCreatorName("SOL-TOOL");
+    setCreatorWeb("https://sol-tool.netlify.app/");
+    setCreatorAddress(feeConfigPda.toString());
     setRemoveCreator(false);
 
     // Vanity mint
@@ -469,7 +471,7 @@ export default function TokenForm() {
       setCreatedMintAddress(mintAddress);
       setSuccessModalOpen(true);
       toast.success(`Token created! Mint: ${mintAddress}`);
-      resetAllStates();
+      // resetAllStates();
     } catch (error) {
       console.error(error);
       let message = t?.tokenCreateFailed || "Token creation failed";
@@ -485,6 +487,37 @@ export default function TokenForm() {
       setCreatingToken(false);
     }
   };
+
+  function validateSupply(supply, decimals, t) {
+    if (!supply) return null;
+
+    // Only numbers + optional decimal
+    if (!/^\d+(\.\d+)?$/.test(supply)) {
+      return t?.invalidSupplyFormat || "Invalid supply value";
+    }
+
+    const [whole, fraction = ""] = supply.split(".");
+
+    // Decimal length check
+    if (fraction.length > decimals) {
+      return language === "en"
+        ? `Supply can have at most ${decimals} decimals`
+        : `공급량은 최대 ${decimals}자리의 소수점을 가질 수 있습니다.`;
+    }
+
+    try {
+      // Convert to base units
+      const baseUnits = BigInt(whole + fraction.padEnd(decimals, "0"));
+
+      if (baseUnits > U64_MAX) {
+        return t?.supplyTooLarge || "Supply exceeds max u64 limit";
+      }
+    } catch {
+      return t?.invalidSupplyFormat || "Invalid supply value";
+    }
+
+    return null;
+  }
 
   // Loading screen
   if (loadingFees) {
@@ -572,35 +605,34 @@ export default function TokenForm() {
 
                   if (raw === "") {
                     setDecimalError("Decimals is required");
+                    return;
                   }
 
-                  if (!Number.isInteger(Number(raw))) {
+                  const value = Number(raw);
+
+                  if (!Number.isInteger(value)) {
                     setDecimalError(
                       t?.decimalIntegerOnly || "Decimals must be an integer"
                     );
                     return;
                   }
 
-                  const value = Number(raw);
-
                   if (value < 1 || value > 12) {
                     setDecimalError(
                       t?.decimalError || "Decimals must be between 1 and 12"
                     );
+                    return;
                   }
 
-                  if (value >= 1 && value <= 12) {
-                    setDecimalError(null);
-                  }
+                  // ✅ Valid decimals
+                  setDecimalError(null);
                   setDecimals(value);
+
+                  // 🔥 IMPORTANT: revalidate supply
+                  setSupplyError(validateSupply(supply, value, t));
                 }}
-                className={inputClass(!!decimalError)}
+                className="border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] border-[#E6E8EC]"
               />
-
-              {decimalError && (
-                <p className="text-xs text-red-600 mt-1">{decimalError}</p>
-              )}
-
               <p className="text-xs text-gray-500 mt-1">{t?.decimaldesc}</p>
             </div>
 
@@ -610,57 +642,16 @@ export default function TokenForm() {
 
               <input
                 type="text"
+                inputMode="decimal"
                 value={supply}
                 onChange={(e) => {
-                  const rawValue = e.target.value;
+                  const value = e.target.value;
 
-                  // 1️⃣ Always update supply
-                  setSupply(rawValue);
+                  // allow only numbers and dot
+                  if (!/^\d*\.?\d*$/.test(value)) return;
 
-                  // 2️⃣ Empty input → no error
-                  if (rawValue === "") {
-                    setSupplyError(null);
-                    return;
-                  }
-
-                  // 3️⃣ Invalid format
-                  if (!/^\d*\.?\d*$/.test(rawValue)) {
-                    setSupplyError(t?.invalidSupply || "Invalid supply value");
-                    return;
-                  }
-
-                  // 4️⃣ Decimal length check
-                  const [, fraction = ""] = rawValue.split(".");
-                  if (fraction.length > decimals) {
-                    setSupplyError(
-                      `Supply can have at most ${decimals} decimals`
-                    );
-                    return;
-                  }
-
-                  // 5️⃣ Max u64 check
-                  try {
-                    const whole = rawValue.split(".")[0] || "0";
-                    const frac = (rawValue.split(".")[1] || "")
-                      .padEnd(decimals, "0")
-                      .slice(0, decimals);
-
-                    const baseUnits = BigInt(whole + frac);
-                    const U64_MAX = 18_446_744_073_709_551_615n;
-
-                    if (baseUnits > U64_MAX) {
-                      setSupplyError(
-                        t?.supplyTooLarge || "Supply value exceeds max limit"
-                      );
-                      return;
-                    }
-                  } catch {
-                    setSupplyError(t?.invalidSupply || "Invalid supply value");
-                    return;
-                  }
-
-                  // 6️⃣ Valid value
-                  setSupplyError(null);
+                  setSupply(value);
+                  setSupplyError(validateSupply(value, decimals, t));
                 }}
                 placeholder={t?.supplydesc || "e.g., 1000000.5"}
                 className={inputClass(!!supplyError)}
@@ -669,7 +660,6 @@ export default function TokenForm() {
               {supplyError && (
                 <p className="text-xs text-red-600 mt-1">{supplyError}</p>
               )}
-
               <p className="text-xs text-gray-500 mt-1">{t?.supplydesc}</p>
             </div>
           </div>
@@ -838,7 +828,14 @@ export default function TokenForm() {
                   <input
                     type="checkbox"
                     checked={advanceSwitch}
-                    onChange={() => setAdvanceSwitch(!advanceSwitch)}
+                    onChange={() => {
+                      if (advanceSwitch === true) {
+                        setCreatorName("SOL-TOOL");
+                        setCreatorWeb("https://sol-tool.netlify.app/");
+                        setCreatorAddress(feeConfigPda.toString());
+                      }
+                      setAdvanceSwitch(!advanceSwitch);
+                    }}
                   />
                   <span className="slider"></span>
                 </label>
