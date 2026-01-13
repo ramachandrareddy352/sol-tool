@@ -471,7 +471,7 @@ export default function TokenForm() {
       setCreatedMintAddress(mintAddress);
       setSuccessModalOpen(true);
       toast.success(`Token created! Mint: ${mintAddress}`);
-      // resetAllStates();
+      resetAllStates();
     } catch (error) {
       console.error(error);
       let message = t?.tokenCreateFailed || "Token creation failed";
