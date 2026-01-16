@@ -138,8 +138,12 @@ export const tokenFormTranslations = {
     supplyExceedsWithDecimals:
       "With this decimals value, supply exceeds the allowed limit",
     invalidSupplyForDecimals: "Invalid supply for selected decimals",
+    hidingInfo:
+      "It is not possible to completely hide whether a block was created by Solmaker through block explorer tracking.",
   },
   ko: {
+    hidingInfo:
+      "블록 탐색기 추적을 통해 해당 블록이 Solmaker에 의해 생성되었는지는 완전히 숨길 수 없습니다.",
     invalidSupplyFormat: "공급량 형식이 올바르지 않습니다",
     supplyDecimalsExceeded: (d) => `공급량은 소수점 ${d}자리까지만 허용됩니다`,
     supplyTooLarge: "선택한 소수점 기준에서 공급량이 너무 큽니다",

@@ -981,6 +981,11 @@ export default function TokenForm() {
                   }`}
                 />
               </div>
+              <p className="mt-2 text-gray-500 leading-relaxed">
+                <span className="font-medium text-gray-600 mr-1">{t.note}</span>
+                <span className="text-gray-600">{t.hidingInfo}</span>
+              </p>
+
               {advanceSwitch === true && (
                 <div className="flex items-center gap-4 pt-2">
                   <label className="switch">
