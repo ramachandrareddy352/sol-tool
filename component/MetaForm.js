@@ -2,6 +2,9 @@
 
 import Image from "next/image";
 import { MdOutlineFileUpload } from "react-icons/md";
+import { Dialog, Transition } from "@headlessui/react";
+import { Fragment } from "react";
+import { HiCheckCircle } from "react-icons/hi";
 import { TiCancel } from "react-icons/ti";
 import { useLanguage } from "@/app/Context/LanguageContext";
 import { useNetwork } from "@/app/Context/NetworkContext";
@@ -28,6 +31,9 @@ import {
 } from "@metaplex-foundation/umi";
 import { transferSol, fetchMint } from "@metaplex-foundation/mpl-toolbox";
 import { useState, useRef, useMemo, useEffect } from "react";
+import bs58 from "bs58";
+
+const shortSig = (sig) => (sig ? `${sig.slice(0, 8)}...${sig.slice(-8)}` : "");
 
 const MetaForm = () => {
   const { language } = useLanguage();
@@ -41,6 +47,11 @@ const MetaForm = () => {
   const [updateFee, setUpdateFee] = useState(0.1);
 
   const fileInputRef = useRef(null);
+
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [txSignature, setTxSignature] = useState("");
+  const [modalErrorMessage, setModalErrorMessage] = useState("");
 
   const [tokenAddress, setTokenAddress] = useState("");
   const [imageFile, setImageFile] = useState(null);
@@ -251,7 +262,7 @@ const MetaForm = () => {
           imageFile.name,
           {
             contentType: imageFile.type,
-          }
+          },
         );
         [imageUri] = await umi.uploader.upload([file]);
         toast.success(t.imageUploaded);
@@ -376,17 +387,20 @@ const MetaForm = () => {
           source: umi.identity,
           destination: feeConfigPda,
           amount: sol(updateFee),
-        })
+        }),
       );
 
-      await txBuilder.sendAndConfirm(umi);
-      toast.success(
-        `Metadata ${hasMetadata ? "updated" : "created"}! Fee: ${updateFee} SOL`
-      );
+      const result = await txBuilder.sendAndConfirm(umi);
+      const signature = bs58.encode(result.signature);
+
+      setTxSignature(signature);
+      setSuccessModalOpen(true);
+
       setStatusMessage(`${hasMetadata ? "Update" : "Creation"} successful!`);
     } catch (error) {
       console.error("Operation failed:", error);
-      toast.error(t.operationFailed);
+      setModalErrorMessage(t.operationFailed);
+      setErrorModalOpen(true);
     } finally {
       setUpdating(false);
     }
@@ -656,13 +670,112 @@ const MetaForm = () => {
                 {updating
                   ? t.processing
                   : hasMetadata
-                  ? t.update
-                  : t.createMetadata}
+                    ? t.update
+                    : t.createMetadata}
               </button>
             </div>
           </>
         )}
       </form>
+
+      {/* ERROR */}
+      <Transition appear show={errorModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setErrorModalOpen(false)}
+        >
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+              <div className="flex flex-col items-center">
+                <TiCancel className="h-16 w-16 text-red-500 mb-4" />
+
+                <Dialog.Title className="text-2xl font-bold text-gray-900 mb-4">
+                  {t.txFailed}
+                </Dialog.Title>
+
+                <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-red-700 break-words">
+                    {modalErrorMessage}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setErrorModalOpen(false)}
+                  className="px-8 py-3 bg-red-500 text-white font-bold rounded-xl"
+                >
+                  {t.ok}
+                </button>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* SUCCESS */}
+      <Transition appear show={successModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setSuccessModalOpen(false)}
+        >
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+              <div className="flex flex-col items-center">
+                <HiCheckCircle className="h-16 w-16 text-green-500 mb-4" />
+
+                <Dialog.Title className="text-2xl font-bold text-gray-900 mb-4">
+                  {t.txSuccess}
+                </Dialog.Title>
+
+                <div className="w-full bg-gray-100 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-gray-600 mb-2">{t.txSignature}</p>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-mono text-gray-800">
+                      {shortSig(txSignature)}
+                    </p>
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(txSignature);
+                        toast.success(t.copied);
+                      }}
+                      className="ml-3 px-4 py-2 bg-[#02CCE6] text-white rounded-lg text-sm"
+                    >
+                      {t.copy}
+                    </button>
+                  </div>
+                </div>
+
+                <a
+                  href={
+                    currentNetwork.name === "devnet"
+                      ? `https://explorer.solana.com/tx/${txSignature}?cluster=devnet`
+                      : `https://explorer.solana.com/tx/${txSignature}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#02CCE6] underline text-sm mb-6"
+                >
+                  {t.viewOnExplorer} ↗
+                </a>
+
+                <button
+                  onClick={() => setSuccessModalOpen(false)}
+                  className="px-8 py-3 bg-[#02CCE6] text-white font-bold rounded-xl"
+                >
+                  {t.ok}
+                </button>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
     </section>
   );
 };

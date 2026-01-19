@@ -4,6 +4,10 @@ import { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../app/Context/LanguageContext";
 import { useNetwork } from "../app/Context/NetworkContext";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { Dialog, Transition } from "@headlessui/react";
+import { Fragment } from "react";
+import { HiCheckCircle } from "react-icons/hi";
+import { TiCancel } from "react-icons/ti";
 import {
   Connection,
   PublicKey,
@@ -19,6 +23,8 @@ import {
 } from "@solana/spl-token";
 import toast from "react-hot-toast";
 import { useSolToolAnchorProgram } from "@/utils/fetch_fee_config";
+
+const shortSig = (sig) => (sig ? `${sig.slice(0, 8)}...${sig.slice(-8)}` : "");
 
 const FreezeForm = () => {
   const { language } = useLanguage();
@@ -60,8 +66,22 @@ const FreezeForm = () => {
       pleaseWait: "Please wait",
       loadingFee: "Loading fee configuration...",
       FailStatus: "Failed to check status",
+      copy: "Copy",
+      copied: "Copied to clipboard!",
+      viewOnExplorer: "View on Solscan Explorer",
+      txSuccess: "Transaction Successful",
+      txFailed: "Transaction Failed",
+      txSignature: "Transaction Signature",
+      ok: "OK",
     },
     ko: {
+      txSuccess: "거래가 성공적으로 완료되었습니다",
+      txFailed: "거래에 실패했습니다",
+      txSignature: "트랜잭션 해시",
+      ok: "확인",
+      copy: "복사",
+      copied: "클립보드에 복사되었습니다!",
+      viewOnExplorer: "Solscan 탐색기에서 보기",
       FailStatus: "상태를 확인하지 못했습니다",
       pleaseWait: "잠시만 기다려 주세요",
       loadingFee: "수수료 설정을 불러오는 중입니다...",
@@ -118,6 +138,11 @@ const FreezeForm = () => {
       fetchFees();
     }
   }, [solToolProgram, feeConfigPda]);
+
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [txSignature, setTxSignature] = useState("");
+  const [modalErrorMessage, setModalErrorMessage] = useState("");
 
   const [tokenAddress, setTokenAddress] = useState("");
   const [checking, setChecking] = useState(false);
@@ -205,7 +230,7 @@ const FreezeForm = () => {
     const mintPubkey = new PublicKey(tokenAddress);
     const tokenAccount = await getAssociatedTokenAddress(
       mintPubkey,
-      userPubkey
+      userPubkey,
     );
     return { tokenAccount, userPubkey };
   };
@@ -220,7 +245,7 @@ const FreezeForm = () => {
 
     const data = await solToolProgram.account.feeConfig.fetch(feeConfigPda);
     const feeLamports = BigInt(
-      isFreeze ? data.freezeUserFee : data.unfreezeUserFee
+      isFreeze ? data.freezeUserFee : data.unfreezeUserFee,
     );
 
     try {
@@ -240,12 +265,12 @@ const FreezeForm = () => {
         ? createFreezeAccountInstruction(
             tokenAccount,
             mintPubkey,
-            wallet.publicKey
+            wallet.publicKey,
           )
         : createThawAccountInstruction(
             tokenAccount,
             mintPubkey,
-            wallet.publicKey
+            wallet.publicKey,
           );
 
       const tx = new Transaction().add(feeTransferInstr).add(actionInstr);
@@ -253,17 +278,19 @@ const FreezeForm = () => {
       const signature = await wallet.sendTransaction(tx, connection);
       await connection.confirmTransaction(signature, "confirmed");
 
-      toast.success(isFreeze ? t.successFreeze : t.successUnfreeze);
+      setTxSignature(signature);
+      setSuccessModalOpen(true);
 
       // Reset input
       if (isFreeze) setUserAddressFreeze("");
       else setUserAddressUnfreeze("");
     } catch (error) {
       console.error(`${isFreeze ? "Freeze" : "Unfreeze"} failed:`, error);
+      setErrorModalOpen(true);
       if (error.message.includes("Account does not exist")) {
-        toast.error(t.noTokenAccount);
+        setModalErrorMessage(t.noTokenAccount);
       } else {
-        toast.error(isFreeze ? t.errorFreeze : t.errorUnfreeze);
+        setModalErrorMessage(isFreeze ? t.errorFreeze : t.errorUnfreeze);
       }
     }
   };
@@ -469,6 +496,98 @@ const FreezeForm = () => {
           </form>
         </section>
       )}
+
+      {/* ERROR */}
+      <Transition appear show={errorModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setErrorModalOpen(false)}
+        >
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+              <div className="flex flex-col items-center">
+                <TiCancel className="h-16 w-16 text-red-500 mb-4" />
+                <Dialog.Title className="text-2xl font-bold text-gray-900 mb-4">
+                  {t.txFailed}
+                </Dialog.Title>
+
+                <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-red-700 break-words">
+                    {modalErrorMessage}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setErrorModalOpen(false)}
+                  className="px-8 py-3 bg-red-500 text-white font-bold rounded-xl"
+                >
+                  {t.ok}
+                </button>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* SUCCESS */}
+      <Transition appear show={successModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setSuccessModalOpen(false)}
+        >
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+              <div className="flex flex-col items-center">
+                <HiCheckCircle className="h-16 w-16 text-green-500 mb-4" />
+                <Dialog.Title className="text-2xl font-bold text-gray-900 mb-4">
+                  {t.txSuccess}
+                </Dialog.Title>
+
+                <div className="w-full bg-gray-100 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-gray-600 mb-2">{t.txSignature}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-mono text-gray-800">
+                      {shortSig(txSignature)}
+                    </p>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(txSignature);
+                        toast.success(t.copied);
+                      }}
+                      className="ml-3 px-4 py-2 bg-[#02CCE6] text-white rounded-lg text-sm"
+                    >
+                      {t.copy}
+                    </button>
+                  </div>
+                </div>
+
+                <a
+                  href={
+                    currentNetwork.name === "devnet"
+                      ? `https://explorer.solana.com/tx/${txSignature}?cluster=devnet`
+                      : `https://explorer.solana.com/tx/${txSignature}`
+                  }
+                  target="_blank"
+                  className="text-[#02CCE6] underline text-sm mb-6"
+                >
+                  {t.viewOnExplorer} ↗
+                </a>
+
+                <button
+                  onClick={() => setSuccessModalOpen(false)}
+                  className="px-8 py-3 bg-[#02CCE6] text-white font-bold rounded-xl"
+                >
+                  {t.ok}
+                </button>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
     </>
   );
 };

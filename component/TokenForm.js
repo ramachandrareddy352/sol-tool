@@ -171,7 +171,7 @@ export default function TokenForm() {
   // Dedicated connection for SPL token queries
   const connection = useMemo(() => {
     return new Connection(currentNetwork.rpc, "confirmed");
-  }, [currentNetwork]);
+  }, [currentNetwork, network]);
 
   const umi = useMemo(() => {
     if (!wallet.connected || !wallet.publicKey || !connection) return null;
@@ -191,9 +191,8 @@ export default function TokenForm() {
         return;
       }
       try {
-        const account = await solToolProgram.account.feeConfig.fetch(
-          feeConfigPda
-        );
+        const account =
+          await solToolProgram.account.feeConfig.fetch(feeConfigPda);
         setCreatorAddress(feeConfigPda.toString());
         setFees({
           createTokenFee: Number(account.createTokenFee) / 1_000_000_000,
@@ -330,7 +329,7 @@ export default function TokenForm() {
         image.name || "image.png",
         {
           contentType: image.type || "image/png",
-        }
+        },
       );
       const [imageUri] = await umi.uploader.upload([umiImage]);
       if (imageUri === undefined) {
@@ -404,7 +403,7 @@ export default function TokenForm() {
           source: umi.identity.publicKey,
           destination: feeConfigPda,
           amount: sol(totalFee),
-        })
+        }),
       );
 
       let tokenAccount = null;
@@ -422,7 +421,7 @@ export default function TokenForm() {
               ata: tokenAccount[0],
               owner: umi.identity.publicKey,
               mint: mintSigner.publicKey,
-            })
+            }),
           )
           .add(
             mintV1(umi, {
@@ -432,7 +431,7 @@ export default function TokenForm() {
               tokenOwner: umi.identity.publicKey,
               token: tokenAccount[0],
               tokenStandard: TokenStandard.Fungible,
-            })
+            }),
           );
       }
 
@@ -443,7 +442,7 @@ export default function TokenForm() {
             owner: umi.identity,
             authorityType: AuthorityType.MintTokens,
             newAuthority: null,
-          })
+          }),
         );
       }
       if (freeze) {
@@ -453,7 +452,7 @@ export default function TokenForm() {
             owner: umi.identity,
             authorityType: AuthorityType.FreezeAccount,
             newAuthority: null,
-          })
+          }),
         );
       }
       if (update) {
@@ -463,7 +462,7 @@ export default function TokenForm() {
             authority: umi.identity,
             newUpdateAuthority: null,
             isMutable: some(false),
-          })
+          }),
         );
       }
 
@@ -589,7 +588,8 @@ export default function TokenForm() {
 
                   if (bytes > 32) {
                     setNameError(
-                      t?.nameExceedLengthError || "Name must be within 32 bytes"
+                      t?.nameExceedLengthError ||
+                        "Name must be within 32 bytes",
                     );
                   } else {
                     setNameError(null);
@@ -624,7 +624,7 @@ export default function TokenForm() {
                   if (bytes > 10) {
                     setSymbolError(
                       t?.symbolExceedLengthError ||
-                        "Symbol must be within 10 bytes"
+                        "Symbol must be within 10 bytes",
                     );
                   } else {
                     setSymbolError(null);
@@ -666,14 +666,14 @@ export default function TokenForm() {
 
                   if (!Number.isInteger(value)) {
                     setDecimalError(
-                      t?.decimalIntegerOnly || "Decimals must be an integer"
+                      t?.decimalIntegerOnly || "Decimals must be an integer",
                     );
                     return;
                   }
 
                   if (value < 1 || value > 12) {
                     setDecimalError(
-                      t?.decimalError || "Decimals must be between 1 and 12"
+                      t?.decimalError || "Decimals must be between 1 and 12",
                     );
                     return;
                   }
@@ -1314,8 +1314,8 @@ export default function TokenForm() {
                 isDone
                   ? "bg-[#02CCE6] text-white shadow-lg"
                   : isActive
-                  ? "bg-white border-2 border-cyan-400 text-cyan-500 scale-110 shadow-md"
-                  : "bg-white border-2 border-gray-300 text-gray-400"
+                    ? "bg-white border-2 border-cyan-400 text-cyan-500 scale-110 shadow-md"
+                    : "bg-white border-2 border-gray-300 text-gray-400"
               }
             `}
                   >
@@ -1329,8 +1329,8 @@ export default function TokenForm() {
                 isDone
                   ? "text-[#02CCE6] font-medium"
                   : isActive
-                  ? "text-cyan-600 font-semibold"
-                  : "text-gray-400"
+                    ? "text-cyan-600 font-semibold"
+                    : "text-gray-400"
               }
             `}
                   >

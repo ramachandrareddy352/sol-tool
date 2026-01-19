@@ -1,7 +1,10 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { HiCheckCircle } from "react-icons/hi";
+import { TiCancel } from "react-icons/ti";
 
 import Banner from "@/component/Banner";
 import Header from "@/component/Header";
@@ -30,6 +33,7 @@ import {
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getMint } from "@solana/spl-token";
 import toast from "react-hot-toast";
+import bs58 from "bs58";
 
 const Page = () => {
   const { language } = useLanguage();
@@ -37,6 +41,14 @@ const Page = () => {
   const { solToolProgram, feeConfigPda } = useSolToolAnchorProgram();
   const [fees, setFees] = useState(0.1);
   const [loading, setLoading] = useState(false);
+
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [txSignature, setTxSignature] = useState("");
+  const [modalErrorMessage, setModalErrorMessage] = useState("");
+
+  const shortSig = (sig) =>
+    sig ? `${sig.slice(0, 8)}...${sig.slice(-8)}` : "";
 
   useEffect(() => {
     const fetchFeeConfig = async () => {
@@ -96,8 +108,22 @@ const Page = () => {
       MetaImmutableError:
         "Metadata is immutable — cannot modify update authority",
       AddrError: "Please enter a valid address",
+      copy: "Copy",
+      copied: "Copied to clipboard!",
+      viewOnExplorer: "View on Solscan Explorer",
+      txSuccess: "Transaction Successful",
+      txFailed: "Transaction Failed",
+      txSignature: "Transaction Signature",
+      ok: "OK",
     },
     ko: {
+      txSuccess: "거래가 성공적으로 완료되었습니다",
+      txFailed: "거래에 실패했습니다",
+      txSignature: "트랜잭션 해시",
+      ok: "확인",
+      copy: "복사",
+      copied: "클립보드에 복사되었습니다!",
+      viewOnExplorer: "Solscan 탐색기에서 보기",
       AddrError: "유효한 주소를 입력해 주세요",
       MetaImmutableError:
         "메타데이터가 변경 불가능하여 업데이트 권한을 수정할 수 없습니다",
@@ -223,10 +249,10 @@ const Page = () => {
       // Fetch SPL Token Mint
       const mint = await getMint(connection, mintPubkey);
       setMintAuthority(
-        mint.mintAuthority ? mint.mintAuthority.toBase58() : null
+        mint.mintAuthority ? mint.mintAuthority.toBase58() : null,
       );
       setFreezeAuthority(
-        mint.freezeAuthority ? mint.freezeAuthority.toBase58() : null
+        mint.freezeAuthority ? mint.freezeAuthority.toBase58() : null,
       );
       // Fetch Metaplex Metadata (if exists)
       try {
@@ -238,7 +264,7 @@ const Page = () => {
       } catch (err) {
         console.log(
           "No Metaplex metadata found or error fetching:",
-          err.message
+          err.message,
         );
         setUpdateAuthority(null);
         setIsMutable(true); // No metadata → no immutability constraint
@@ -326,11 +352,14 @@ const Page = () => {
           source: umi.identity,
           destination: feeAddress,
           amount: feeAmount,
-        })
+        }),
       );
 
-      await txBuilder.sendAndConfirm(umi);
-      toast.success(newAuth ? t.successUpdate : t.successRevoke);
+      const result = await txBuilder.sendAndConfirm(umi);
+      const signature = bs58.encode(result.signature);
+
+      setTxSignature(signature);
+      setSuccessModalOpen(true);
 
       // Clear inputs
       if (type === "mint") setNewMintAuth("");
@@ -340,7 +369,10 @@ const Page = () => {
       await checkToken();
     } catch (error) {
       console.error("Update failed:", error);
-      toast.error(newAuth ? t.errorUpdate : t.errorRevoke);
+      setModalErrorMessage(
+        error?.message || (newAuth ? t.errorUpdate : t.errorRevoke),
+      );
+      setErrorModalOpen(true);
     } finally {
       setUpdating(false);
     }
@@ -368,7 +400,7 @@ const Page = () => {
     newAuthState,
     setNewAuthState,
     revokeLabel,
-    updateLabel
+    updateLabel,
   ) => {
     const showControls =
       type !== "update" ? isRevocable(currentAuth) : canModifyUpdateAuthority;
@@ -515,7 +547,7 @@ const Page = () => {
                     newMintAuth,
                     setNewMintAuth,
                     t.revokeMint,
-                    t.updateMint
+                    t.updateMint,
                   )}
                 </div>
 
@@ -528,7 +560,7 @@ const Page = () => {
                     newFreezeAuth,
                     setNewFreezeAuth,
                     t.revokeFreeze,
-                    t.updateFreeze
+                    t.updateFreeze,
                   )}
                 </div>
 
@@ -541,7 +573,7 @@ const Page = () => {
                     newUpdateAuth,
                     setNewUpdateAuth,
                     t.revokeUpdate,
-                    t.updateUpdate
+                    t.updateUpdate,
                   )}
                 </div>
               </div>
@@ -549,6 +581,106 @@ const Page = () => {
           </form>
         </section>
       )}
+
+      {/* ERROR */}
+      <Transition appear show={errorModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setErrorModalOpen(false)}
+        >
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+              <div className="flex flex-col items-center">
+                <TiCancel className="h-16 w-16 text-red-500 mb-4" />
+
+                <Dialog.Title className="text-2xl font-bold text-gray-900 mb-4">
+                  {t.txFailed}
+                </Dialog.Title>
+
+                <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-red-700 break-words">
+                    {modalErrorMessage}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setErrorModalOpen(false)}
+                  className="px-8 py-3 bg-red-500 text-white font-bold rounded-xl"
+                >
+                  {t.ok}
+                </button>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* SUCCESS */}
+      <Transition appear show={successModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setSuccessModalOpen(false)}
+        >
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+              <div className="flex flex-col items-center">
+                <HiCheckCircle className="h-16 w-16 text-green-500 mb-4" />
+
+                <Dialog.Title className="text-2xl font-bold text-gray-900 mb-4">
+                  {t.txSuccess}
+                </Dialog.Title>
+
+                <div className="w-full bg-gray-100 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-gray-600 mb-2">{t.txSignature}</p>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-mono text-gray-800">
+                      {shortSig(txSignature)}
+                    </p>
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(txSignature);
+                        toast.success(t.copied);
+                      }}
+                      className="ml-3 px-4 py-2 bg-[#02CCE6] text-white rounded-lg text-sm"
+                    >
+                      {t.copy}
+                    </button>
+                  </div>
+                </div>
+
+                <a
+                  href={
+                    currentNetwork.name === "devnet"
+                      ? `https://explorer.solana.com/tx/${txSignature}?cluster=devnet`
+                      : `https://explorer.solana.com/tx/${txSignature}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#02CCE6] underline text-sm mb-6"
+                >
+                  {t.viewOnExplorer} ↗
+                </a>
+
+                <button
+                  onClick={() => setSuccessModalOpen(false)}
+                  className="px-8 py-3 bg-[#02CCE6] text-white font-bold rounded-xl"
+                >
+                  {t.ok}
+                </button>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      </Transition>
+
       <Footer />
     </>
   );

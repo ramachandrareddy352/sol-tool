@@ -27,13 +27,13 @@ export function LanguageProvider({ children }) {
       development: "Development",
     },
     ko: {
-      creator: "창작자",
+      creator: "생성",
       mint: "발행/소각",
       freeze: "동결",
       meta: "메타",
       owner: "소유권",
       connectWallet: "지갑 연결",
-      development: "개발 모드",
+      development: "개발",
     },
   };
 
