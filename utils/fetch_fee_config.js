@@ -23,7 +23,7 @@ export function getSolToolProgramId(cluster) {
 
 export function useSolToolAnchorProgram() {
   const connection = new anchor.web3.Connection(
-    "https://mainnet.helius-rpc.com/?api-key=a8725ae8-c8f6-4dab-b188-5d762f192063",
+    process.env.NEXT_PUBLIC_MAINNET_RPC,
     "confirmed",
   );
   const wallet = useWallet();

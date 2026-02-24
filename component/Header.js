@@ -79,11 +79,26 @@ const Header = () => {
           </button>
 
           <Link href="/" className="flex items-center gap-2">
+            {/* Mobile Image */}
+            <img
+              src="/icon.png"
+              className="w-8 h-8 sm:hidden mr-2"
+              alt="mobile-logo"
+            />
+
+            {/* Desktop Image */}
+            <img
+              src="/home.png"
+              className="hidden sm:block h-12 w-auto"
+              alt="desktop-logo"
+            />
+          </Link>
+          {/* <Link href="/" className="flex items-center gap-2">
             <img src="logo.png" className="w-7 h-7" alt="logo" />
             <h1 className="hidden sm:block text-2xl font-extrabold font-[Barlow_Condensed]">
               SOL&nbsp;Maker
             </h1>
-          </Link>
+          </Link> */}
         </div>
 
         {/* ================= CENTER : NAV LINKS ================= */}
@@ -130,23 +145,23 @@ const Header = () => {
             {langOpen && (
               <div className="absolute right-0 mt-3 w-40 bg-white rounded-xl shadow-xl border z-50 overflow-hidden">
                 <button
-                  onClick={() => handleLangChange("en")}
+                  onClick={() => handleLangChange("ko")}
                   className="w-full px-4 py-3 text-left hover:bg-gray-50 font-medium"
                 >
-                  English
+                  한국어
                 </button>
                 <button
-                  onClick={() => handleLangChange("ko")}
+                  onClick={() => handleLangChange("en")}
                   className="w-full px-4 py-3 text-left hover:bg-gray-50 font-medium border-t"
                 >
-                  한국어
+                  English
                 </button>
               </div>
             )}
           </div>
 
           {/* Network Selector */}
-          <div className="relative">
+          {/* <div className="relative">
             <button
               // onClick={handleNetworkToggle}
               className={`px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 border transition
@@ -162,12 +177,12 @@ const Header = () => {
 
             {networkOpen && (
               <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border z-50">
-                {/* <button
+                <button
                   onClick={() => handleNetworkChange("devnet")}
                   className="w-full px-4 py-3 text-left hover:bg-blue-50"
                 >
                   Devnet
-                </button> */}
+                </button>
                 <button
                   // onClick={() => handleNetworkChange("mainnet")}
                   className="w-full px-4 py-3 text-left hover:bg-red-50 border-t"
@@ -176,21 +191,21 @@ const Header = () => {
                 </button>
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Wallet */}
           <WalletMultiButton
             style={{
               backgroundColor: "#02CCE6",
               color: "white",
-              fontWeight: "600",
-              padding: "0.4rem 1rem",
+              fontWeight: "600", // but this is not reactive
               borderRadius: "0.5rem",
               display: "flex",
               alignItems: "center",
               gap: "0.5rem",
               border: "none",
             }}
+            className="sm:px-6 sm:py-2.5 text-sm sm:text-base min-w-32.5 sm:min-w-42.5"
           >
             <span>
               {publicKey

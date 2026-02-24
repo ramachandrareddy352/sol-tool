@@ -60,7 +60,7 @@ const Page = () => {
       }
     };
     fetchFeeConfig();
-  }, [solToolProgram, feeConfigPda]);
+  }, []);
 
   const t = {
     en: {
@@ -501,84 +501,88 @@ const Page = () => {
         <LoadingPage />
       ) : (
         <section className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-10">
-            {/* ================= Token Address Card ================= */}
-            <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                🪙 {t.tokenAddress}
-              </label>
+          {loading && <LoadingPage />}
 
-              <div className="flex flex-col sm:flex-row gap-4">
-                <input
-                  className="flex-1 border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
-                  type="text"
-                  placeholder={t.enterAddress}
-                  value={tokenAddress}
-                  onChange={(e) => setTokenAddress(e.target.value)}
-                />
+          {!loading && (
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-10">
+              {/* ================= Token Address Card ================= */}
+              <div className="bg-white border border-[#E6E8EC] rounded-2xl p-6 shadow-sm">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  🪙 {t.tokenAddress}
+                </label>
 
-                <button
-                  type="button"
-                  onClick={checkToken}
-                  disabled={checking || !tokenAddress.trim()}
-                  className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-600 transition"
-                >
-                  🔍 {checking ? t.checking : t.check}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <input
+                    className="flex-1 border border-[#E6E8EC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#02CCE6]"
+                    type="text"
+                    placeholder={t.enterAddress}
+                    value={tokenAddress}
+                    onChange={(e) => setTokenAddress(e.target.value)}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={checkToken}
+                    disabled={checking || !tokenAddress.trim()}
+                    className="w-full sm:w-auto bg-[#02CCE6] text-white px-8 py-3 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-600 transition"
+                  >
+                    🔍 {checking ? t.checking : t.check}
+                  </button>
+                </div>
+
+                {errorMessage && (
+                  <p className="mt-3 text-sm font-medium text-red-600">
+                    ⚠️ {errorMessage}
+                  </p>
+                )}
               </div>
 
-              {errorMessage && (
-                <p className="mt-3 text-sm font-medium text-red-600">
-                  ⚠️ {errorMessage}
-                </p>
+              {/* ================= Authority Cards ================= */}
+              {isValidToken && (
+                <div className="grid gap-6">
+                  {/* Mint Authority */}
+                  <div>
+                    {/* Icon injected via title */}
+                    {renderAuthoritySection(
+                      "mint",
+                      <>🪙 {t.mintAuthority}</>,
+                      mintAuthority,
+                      newMintAuth,
+                      setNewMintAuth,
+                      t.revokeMint,
+                      t.updateMint,
+                    )}
+                  </div>
+
+                  {/* Freeze Authority */}
+                  <div>
+                    {renderAuthoritySection(
+                      "freeze",
+                      <>❄️ {t.freezeAuthority}</>,
+                      freezeAuthority,
+                      newFreezeAuth,
+                      setNewFreezeAuth,
+                      t.revokeFreeze,
+                      t.updateFreeze,
+                    )}
+                  </div>
+
+                  {/* Metadata Authority */}
+                  <div>
+                    {renderAuthoritySection(
+                      "update",
+                      <>📝 {t.updateAuthority}</>,
+                      updateAuthority,
+                      newUpdateAuth,
+                      setNewUpdateAuth,
+                      t.revokeUpdate,
+                      t.updateUpdate,
+                    )}
+                  </div>
+                </div>
               )}
-            </div>
-
-            {/* ================= Authority Cards ================= */}
-            {isValidToken && (
-              <div className="grid gap-6">
-                {/* Mint Authority */}
-                <div>
-                  {/* Icon injected via title */}
-                  {renderAuthoritySection(
-                    "mint",
-                    <>🪙 {t.mintAuthority}</>,
-                    mintAuthority,
-                    newMintAuth,
-                    setNewMintAuth,
-                    t.revokeMint,
-                    t.updateMint,
-                  )}
-                </div>
-
-                {/* Freeze Authority */}
-                <div>
-                  {renderAuthoritySection(
-                    "freeze",
-                    <>❄️ {t.freezeAuthority}</>,
-                    freezeAuthority,
-                    newFreezeAuth,
-                    setNewFreezeAuth,
-                    t.revokeFreeze,
-                    t.updateFreeze,
-                  )}
-                </div>
-
-                {/* Metadata Authority */}
-                <div>
-                  {renderAuthoritySection(
-                    "update",
-                    <>📝 {t.updateAuthority}</>,
-                    updateAuthority,
-                    newUpdateAuth,
-                    setNewUpdateAuth,
-                    t.revokeUpdate,
-                    t.updateUpdate,
-                  )}
-                </div>
-              </div>
-            )}
-          </form>
+            </form>
+          )}
         </section>
       )}
 
@@ -601,7 +605,7 @@ const Page = () => {
                 </Dialog.Title>
 
                 <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-red-700 break-words">
+                  <p className="text-sm text-red-700 wrap-break-word">
                     {modalErrorMessage}
                   </p>
                 </div>

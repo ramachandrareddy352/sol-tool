@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import Image from "next/image";
@@ -92,7 +93,7 @@ const MetaForm = () => {
       }
     };
     if (solToolProgram) fetchFee();
-  }, [solToolProgram, feeConfigPda]);
+  }, []);
 
   const umi = useMemo(() => {
     if (!wallet.connected || !wallet.publicKey) return null;
@@ -407,7 +408,7 @@ const MetaForm = () => {
   };
 
   const LoadingPage = () => (
-    <div className="flex items-center justify-center min-h-[400px]">
+    <div className="flex items-center justify-center min-h-100">
       <div className="text-center">
         <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-[#02CCE6] mx-auto"></div>
         <p className="mt-6 text-lg font-medium text-gray-700">{t.loadingFee}</p>
@@ -592,7 +593,7 @@ const MetaForm = () => {
                     onChange={(e) => setSocialEnabled(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#02CCE6] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full peer-checked:after:translate-x-full after:transition-all"></div>
+                  <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#02CCE6] after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:h-5 after:w-5 after:rounded-full peer-checked:after:translate-x-full after:transition-all"></div>
                 </label>
               </div>
 
@@ -697,7 +698,7 @@ const MetaForm = () => {
                 </Dialog.Title>
 
                 <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-red-700 break-words">
+                  <p className="text-sm text-red-700 wrap-break-word">
                     {modalErrorMessage}
                   </p>
                 </div>

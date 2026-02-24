@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import toast from "react-hot-toast";
+import * as anchor from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
@@ -19,13 +20,12 @@ import { LuArrowDownToLine, LuRefreshCw } from "react-icons/lu";
 export default function AdminPage() {
   const { solToolProgram, feeConfigPda } = useSolToolAnchorProgram();
   const { publicKey } = useWallet();
-  const { connection } = useConnection();
   const { language } = useLanguage();
 
   // This ensures t always uses the current language
   const t = useMemo(
     () => adminTranslations[language] || adminTranslations.en,
-    [language]
+    [language],
   );
 
   const [feeConfig, setFeeConfig] = useState(null);
@@ -56,18 +56,37 @@ export default function AdminPage() {
     update_metadata_fee: 0,
   });
 
+  const connection = new anchor.web3.Connection(
+    process.env.NEXT_PUBLIC_MAINNET_RPC,
+    "confirmed",
+  );
+
   const fetchData = async () => {
     if (!solToolProgram || !feeConfigPda) return;
 
     setRefreshing(true);
     try {
-      const account = await solToolProgram.account.feeConfig.fetch(
-        feeConfigPda
-      );
+      const account =
+        await solToolProgram.account.feeConfig.fetch(feeConfigPda);
       setFeeConfig(account);
 
-      const bal = await connection.getBalance(feeConfigPda);
-      setBalance((bal - 2000000) / LAMPORTS_PER_SOL);
+      const accountInfo = await connection.getAccountInfo(feeConfigPda);
+
+      if (accountInfo) {
+        const balanceLamports = accountInfo.lamports;
+        const accountSize = accountInfo.data.length;
+
+        // Get minimum rent-exempt balance for this account size
+        const rentExemption =
+          await connection.getMinimumBalanceForRentExemption(accountSize);
+
+        const withdrawableLamports = Math.max(
+          0,
+          balanceLamports - rentExemption,
+        );
+
+        setBalance(withdrawableLamports / LAMPORTS_PER_SOL);
+      }
 
       setFees({
         create_token_fee: Number(account.createTokenFee) / LAMPORTS_PER_SOL,
@@ -113,7 +132,7 @@ export default function AdminPage() {
     if (solToolProgram && feeConfigPda) {
       fetchData();
     }
-  }, [solToolProgram, feeConfigPda]);
+  }, []);
 
   const isOwner = useMemo(() => {
     return (
@@ -134,25 +153,25 @@ export default function AdminPage() {
           modifyCreatorInfoFee: solToLamportsBN(fees.modify_creator_info_fee),
           customTokenAddressFee: solToLamportsBN(fees.custom_token_address_fee),
           accountDeleteRefundFee: solToLamportsBN(
-            fees.account_delete_refund_fee
+            fees.account_delete_refund_fee,
           ),
           revokeMintAuthorityFee: solToLamportsBN(
-            fees.revoke_mint_authority_fee
+            fees.revoke_mint_authority_fee,
           ),
           revokeFreezeAuthorityFee: solToLamportsBN(
-            fees.revoke_freeze_authority_fee
+            fees.revoke_freeze_authority_fee,
           ),
           revokeMetadataAuthorityFee: solToLamportsBN(
-            fees.revoke_metadata_authority_fee
+            fees.revoke_metadata_authority_fee,
           ),
           updateMintAuthorityFee: solToLamportsBN(
-            fees.update_mint_authority_fee
+            fees.update_mint_authority_fee,
           ),
           updateFreezeAuthorityFee: solToLamportsBN(
-            fees.update_freeze_authority_fee
+            fees.update_freeze_authority_fee,
           ),
           updateMetadataAuthorityFee: solToLamportsBN(
-            fees.update_metadata_authority_fee
+            fees.update_metadata_authority_fee,
           ),
           mintTokensFee: solToLamportsBN(fees.mint_tokens_fee),
           burnTokensFee: solToLamportsBN(fees.burn_tokens_fee),

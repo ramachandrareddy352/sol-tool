@@ -53,7 +53,7 @@ const FeeModal = () => {
   };
 
   return (
-    <section className="flex flex-col gap-3 bg-[#fcfcfd] md:w-[400px] rounded border border-[#E6E8EC] p-4 absolute right-0 top-10 z-10">
+    <section className="flex flex-col gap-3 bg-[#fcfcfd] md:w-100 rounded border border-[#E6E8EC] p-4 absolute right-0 top-10 z-10">
       <h1 className="text-2xl font-bold">{t.title}</h1>
 
       <p className="text-sm text-gray-600">{t.description}</p>

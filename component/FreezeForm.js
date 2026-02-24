@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -137,7 +138,7 @@ const FreezeForm = () => {
     if (solToolProgram) {
       fetchFees();
     }
-  }, [solToolProgram, feeConfigPda]);
+  }, []);
 
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [errorModalOpen, setErrorModalOpen] = useState(false);
@@ -339,7 +340,7 @@ const FreezeForm = () => {
   };
 
   const LoadingPage = () => (
-    <div className="flex items-center justify-center min-h-[400px]">
+    <div className="flex items-center justify-center min-h-100">
       <div className="text-center">
         <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-[#02CCE6] mx-auto"></div>
         <p className="mt-6 text-lg font-medium text-gray-700">{t.loadingFee}</p>
@@ -514,7 +515,7 @@ const FreezeForm = () => {
                 </Dialog.Title>
 
                 <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-red-700 break-words">
+                  <p className="text-sm text-red-700 wrap-break-word">
                     {modalErrorMessage}
                   </p>
                 </div>

@@ -7,7 +7,7 @@ import "./globals.css";
 export const metadata = {
   title: "SOL Maker",
   description:
-    "A simple tool to create your SPL meme tokens with advance features and manage ownership, minting, feezing and metadata of your token. Developed by T.Rama Chandra Reddy",
+    "A simple tool to create your SPL meme tokens with advance features and manage ownership, minting, feezing and metadata of your token. Chain Systems Company (Developed by T. Rama Chandra Reddy, Farman Code Audit, PM Jeong woo Hwang)",
 };
 
 export default function RootLayout({ children }) {

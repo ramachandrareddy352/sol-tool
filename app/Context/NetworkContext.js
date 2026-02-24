@@ -27,7 +27,7 @@ export function NetworkProvider({ children }) {
     mainnet: {
       name: "mainnet",
       label: "Mainnet",
-      rpc: "https://mainnet.helius-rpc.com/?api-key=a8725ae8-c8f6-4dab-b188-5d762f192063",
+      rpc: process.env.NEXT_PUBLIC_MAINNET_RPC,
       description: "Live Network (Real SOL)",
       color: "red",
     },

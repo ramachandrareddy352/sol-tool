@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 const LanguageContext = createContext();
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState("ko");
   const [priority, setPriority] = useState("turbo"); // default
 
   // Load from localStorage

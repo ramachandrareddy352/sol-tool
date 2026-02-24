@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../app/Context/LanguageContext";
@@ -230,7 +231,7 @@ const MinForm = () => {
       }
     };
     if (solToolProgram) fetchFees();
-  }, [solToolProgram, feeConfigPda]);
+  }, []);
 
   const [tokenAddress, setTokenAddress] = useState("");
   const [checking, setChecking] = useState(false);
@@ -748,7 +749,7 @@ const MinForm = () => {
                 </Dialog.Title>
 
                 <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-red-700 break-words">
+                  <p className="text-sm text-red-700 wrap-break-word">
                     {modalErrorMessage}
                   </p>
                 </div>
