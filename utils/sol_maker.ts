@@ -14,6 +14,35 @@ export type SolMaker = {
   };
   instructions: [
     {
+      name: "changeOwner";
+      discriminator: [109, 40, 40, 90, 224, 120, 193, 184];
+      accounts: [
+        {
+          name: "owner";
+          writable: true;
+          signer: true;
+        },
+        {
+          name: "feeConfig";
+          writable: true;
+          pda: {
+            seeds: [
+              {
+                kind: "const";
+                value: [102, 101, 101, 95, 99, 111, 110, 102, 105, 103];
+              },
+            ];
+          };
+        },
+      ];
+      args: [
+        {
+          name: "newOwner";
+          type: "pubkey";
+        },
+      ];
+    },
+    {
       name: "initializeFeeConfig";
       discriminator: [62, 162, 20, 133, 121, 65, 145, 27];
       accounts: [

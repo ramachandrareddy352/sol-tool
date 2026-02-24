@@ -411,7 +411,7 @@ const Page = () => {
         <h3 className="text-lg font-semibold text-gray-800 mb-1">{title}</h3>
 
         {/* Status */}
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm text-gray-600 mt-1 break-all sm:wrap-break-word">
           {type === "update" && !isMutable
             ? t.immutable
             : getAuthorityStatus(currentAuth)}

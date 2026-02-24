@@ -210,7 +210,7 @@ export default function AdminPage() {
     try {
       const tx = await solToolProgram.methods
         .changeOwner(new PublicKey(newOwner))
-        .accounts({ currentOwner: publicKey, feeConfig: feeConfigPda })
+        .accounts({ owner: publicKey, feeConfig: feeConfigPda })
         .rpc();
 
       toast.success(t.ownershipTransferred);
