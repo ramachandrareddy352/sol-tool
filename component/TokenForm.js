@@ -214,7 +214,7 @@ export default function TokenForm() {
       }
     };
     fetchFees();
-  }, [solToolProgram, currentNetwork, network]);
+  }, []);
 
   const totalFee =
     fees.createTokenFee +

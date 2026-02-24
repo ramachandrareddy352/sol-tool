@@ -5,7 +5,7 @@ import { PublicKey } from "@solana/web3.js";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useNetwork } from "@/app/Context/NetworkContext";
 
-import solToolIdl from "./sol_tool.json";
+import solToolIdl from "./sol_maker.json";
 
 /**
  * Resolve Program ID based on cluster
@@ -17,12 +17,15 @@ export function getSolToolProgramId(cluster) {
       return new PublicKey("3gAEMPB7deboau3r7CUxF2om3ZYkMq9TddLVzpV1pVFt");
     case "mainnet":
     default:
-      return new PublicKey("3gAEMPB7deboau3r7CUxF2om3ZYkMq9TddLVzpV1pVFt");
+      return new PublicKey("A7xg3N2S6hkFcaFS9pkurxLT8gLeHxtkSwhda4MhRBqb");
   }
 }
 
 export function useSolToolAnchorProgram() {
-  const { connection } = useConnection();
+  const connection = new anchor.web3.Connection(
+    "https://mainnet.helius-rpc.com/?api-key=a8725ae8-c8f6-4dab-b188-5d762f192063",
+    "confirmed",
+  );
   const wallet = useWallet();
   const { network } = useNetwork(); // devnet / mainnet
 
@@ -59,9 +62,13 @@ export function useSolToolAnchorProgram() {
   const feeConfigPda = useMemo(() => {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("fee_config")],
-      programId
+      programId,
     )[0];
   }, [programId]);
+
+  // console.log("Network:", network);
+  // console.log("Program ID:", programId.toString());
+  // console.log("PDA:", feeConfigPda.toString());
 
   return {
     solToolProgram,

@@ -69,7 +69,7 @@ const Header = () => {
     <header className="bg-[#FCFCFD] border-b border-[#E6E8EC]">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* ================= LEFT : LOGO ================= */}
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           {/* Mobile Menu */}
           <button
             onClick={handleMenuToggle}
@@ -148,7 +148,7 @@ const Header = () => {
           {/* Network Selector */}
           <div className="relative">
             <button
-              onClick={handleNetworkToggle}
+              // onClick={handleNetworkToggle}
               className={`px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 border transition
             ${
               currentNetwork.name === "devnet"
@@ -162,14 +162,14 @@ const Header = () => {
 
             {networkOpen && (
               <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border z-50">
-                <button
+                {/* <button
                   onClick={() => handleNetworkChange("devnet")}
                   className="w-full px-4 py-3 text-left hover:bg-blue-50"
                 >
                   Devnet
-                </button>
+                </button> */}
                 <button
-                  onClick={() => handleNetworkChange("mainnet")}
+                  // onClick={() => handleNetworkChange("mainnet")}
                   className="w-full px-4 py-3 text-left hover:bg-red-50 border-t"
                 >
                   Mainnet-Beta

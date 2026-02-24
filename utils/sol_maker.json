@@ -1,41 +1,12 @@
 {
-  "address": "3gAEMPB7deboau3r7CUxF2om3ZYkMq9TddLVzpV1pVFt",
+  "address": "A7xg3N2S6hkFcaFS9pkurxLT8gLeHxtkSwhda4MhRBqb",
   "metadata": {
-    "name": "sol_tool",
+    "name": "sol_maker",
     "version": "0.1.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
   "instructions": [
-    {
-      "name": "change_owner",
-      "discriminator": [109, 40, 40, 90, 224, 120, 193, 184],
-      "accounts": [
-        {
-          "name": "current_owner",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "fee_config",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [102, 101, 101, 95, 99, 111, 110, 102, 105, 103]
-              }
-            ]
-          }
-        }
-      ],
-      "args": [
-        {
-          "name": "new_owner",
-          "type": "pubkey"
-        }
-      ]
-    },
     {
       "name": "initialize_fee_config",
       "discriminator": [62, 162, 20, 133, 121, 65, 145, 27],
@@ -84,8 +55,7 @@
         {
           "name": "owner",
           "writable": true,
-          "signer": true,
-          "relations": ["fee_config"]
+          "signer": true
         },
         {
           "name": "fee_config",
@@ -118,8 +88,7 @@
         {
           "name": "owner",
           "writable": true,
-          "signer": true,
-          "relations": ["fee_config"]
+          "signer": true
         },
         {
           "name": "fee_config",

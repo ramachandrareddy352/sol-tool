@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 const NetworkContext = createContext();
 
 export function NetworkProvider({ children }) {
-  const [network, setNetwork] = useState("devnet"); // Default: devnet
+  const [network, setNetwork] = useState("mainnet"); // Default: devnet
 
   // Load saved network from localStorage on mount
   useEffect(() => {
@@ -17,17 +17,17 @@ export function NetworkProvider({ children }) {
 
   // Available networks with name, RPC URL, and display label
   const networks = {
-    devnet: {
-      name: "devnet",
-      label: "Devnet",
-      rpc: "https://kirstyn-7fsg6s-fast-devnet.helius-rpc.com",
-      description: "Test Network",
-      color: "blue",
-    },
+    // devnet: {
+    //   name: "devnet",
+    //   label: "Devnet",
+    //   rpc: "https://kirstyn-7fsg6s-fast-devnet.helius-rpc.com",
+    //   description: "Test Network",
+    //   color: "blue",
+    // },
     mainnet: {
       name: "mainnet",
       label: "Mainnet",
-      rpc: "https://rosemaria-weqok5-fast-mainnet.helius-rpc.com",
+      rpc: "https://mainnet.helius-rpc.com/?api-key=a8725ae8-c8f6-4dab-b188-5d762f192063",
       description: "Live Network (Real SOL)",
       color: "red",
     },
