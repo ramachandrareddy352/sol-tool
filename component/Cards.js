@@ -32,7 +32,7 @@ const Cards = () => {
       title_ko: "솔라나 토큰 에어드랍 웹사이트",
       description_ko:
         "우리는 Solana 토큰을 배포하기 위한 사용자 친화적인 인터페이스를 갖춘 플랫폼을 제공합니다.",
-      image: "/3,Solana Token Airdrop Website.jpg",
+      image: "/3.Solana Token Airdrop Website.jpg",
       link: "https://t.me/mcret",
     },
     {
