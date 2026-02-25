@@ -5,62 +5,82 @@ import SolanaWalletProvider from "../utils/WalletProvider";
 import "./globals.css";
 
 export const metadata = {
-  title: "SOL Maker",
+  metadataBase: new URL("https://www.sol-maker.com"),
+
+  title: {
+    default: "솔라나 SPL 토큰 생성기 | SOL Maker",
+    template: "%s | SOL Maker",
+  },
+
   description:
-    "A simple tool to create your SPL meme tokens with advance features and manage ownership, minting, feezing and metadata of your token. Chain Systems Company (Developed by T. Rama Chandra Reddy, Farman Code Audit, PM Jeong woo Hwang)",
+    "SOL Maker는 솔라나(Solana)에서 SPL 토큰을 빠르게 생성하고 관리할 수 있는 웹 도구입니다. 토큰 발행, 메타데이터 설정, 권한(Authority) 관리 등을 지원합니다.",
+
+  keywords: [
+    "Solana",
+    "SPL Token",
+    "솔라나 토큰 생성",
+    "SPL 토큰 만들기",
+    "Token Generator",
+    "Solana Token Tool",
+    "SPL Token Creator",
+  ],
+
+  alternates: {
+    canonical: "/",
+    languages: {
+      "ko-KR": "/",
+      en: "/en",
+    },
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+  },
+
+  openGraph: {
+    type: "website",
+    url: "https://www.sol-maker.com/",
+    siteName: "SOL Maker",
+    title: "솔라나 SPL 토큰 생성기 | SOL Maker",
+    description:
+      "솔라나(Solana) SPL 토큰 생성 및 관리를 위한 웹 도구. 빠른 발행, 메타데이터 설정, 권한 관리 지원.",
+    locale: "ko_KR",
+    alternateLocale: ["en_US"],
+    images: [
+      {
+        url: "/home.png",
+        width: 1200,
+        height: 630,
+        alt: "SOL Maker - SPL Token Generator",
+      },
+    ],
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "솔라나 SPL 토큰 생성기 | SOL Maker",
+    description: "솔라나 SPL 토큰 생성 및 관리 웹 도구.",
+    images: ["/home.png"],
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ko" suppressHydrationWarning>
       <body>
         <SolanaWalletProvider>
           <NetworkProvider>
             <LanguageProvider>
               {children}
-              <Toaster
-                position="top-right"
-                // toastOptions={{
-                //   duration: 4000,
-                //   style: {
-                //     background:
-                //       "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", // Subtle gradient for depth
-                //     color: "#e5e7eb",
-                //     border: "1px solid #02CCE6",
-                //     borderRadius: "16px", // Slightly larger radius for modern feel
-                //     padding: "16px 20px", // More breathing room
-                //     fontSize: "14px",
-                //     fontWeight: "500",
-                //     boxShadow:
-                //       "0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(2, 204, 230, 0.05)", // Multi-layered shadow for professionalism
-                //     backdropFilter: "blur(10px)", // Subtle blur for glassmorphism effect
-                //   },
-                //   className: "custom-toast", // Add class for potential CSS overrides
-                //   progressClassName: "custom-progress", // Class for progress bar styling (add CSS: .custom-progress { height: 3px; background: linear-gradient(90deg, #02CCE6, #00b4cd); border-radius: 0 0 16px 16px; } ),
-                //   success: {
-                //     style: {
-                //       borderColor: "#22c55e",
-                //       background:
-                //         "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-                //     },
-                //     iconTheme: {
-                //       primary: "#22c55e",
-                //       secondary: "#0f172a",
-                //     },
-                //   },
-                //   error: {
-                //     style: {
-                //       borderColor: "#ef4444",
-                //       background:
-                //         "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-                //     },
-                //     iconTheme: {
-                //       primary: "#ef4444",
-                //       secondary: "#0f172a",
-                //     },
-                //   },
-                // }}
-              />
+              <Toaster position="top-right" />
             </LanguageProvider>
           </NetworkProvider>
         </SolanaWalletProvider>

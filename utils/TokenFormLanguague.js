@@ -140,8 +140,14 @@ export const tokenFormTranslations = {
     invalidSupplyForDecimals: "Invalid supply for selected decimals",
     hidingInfo:
       "It is not possible to completely hide whether a block was created by Solmaker through block explorer tracking.",
+    symbolRestricted: "This token symbol is restricted.",
+    generateCustomAddress: "Please generate your custom address.",
+    failedToUploadImage: "Failed to upload Image",
   },
   ko: {
+    generateCustomAddress: "사용자 지정 주소를 생성해 주세요.",
+    failedToUploadImage: "이미지 업로드에 실패했습니다.",
+    symbolRestricted: "이 토큰 심볼은 제한되어 있습니다.",
     hidingInfo:
       "블록 탐색기 추적을 통해 해당 블록이 Solmaker에 의해 생성되었는지는 완전히 숨길 수 없습니다.",
     invalidSupplyFormat: "공급량 형식이 올바르지 않습니다",

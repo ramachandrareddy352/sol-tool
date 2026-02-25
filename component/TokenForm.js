@@ -327,7 +327,7 @@ export default function TokenForm() {
 
       if (showPersonal === true) {
         if (!generatedMint) {
-          setPersonalizationError("Please generate your custom address.");
+          setPersonalizationError(t?.generateCustomAddress);
           return;
         }
 
@@ -347,7 +347,7 @@ export default function TokenForm() {
       );
       const [imageUri] = await umi.uploader.upload([umiImage]);
       if (imageUri === undefined) {
-        throw new Error("Failed to upload Image");
+        throw new Error(t?.failedToUploadImage);
       }
       setCreationStep(2);
 
@@ -554,7 +554,7 @@ export default function TokenForm() {
 
   useEffect(() => {
     if (showPersonal && !generatedMint) {
-      setPersonalizationError("Please generate your custom address.");
+      setPersonalizationError(t?.generateCustomAddress);
     } else {
       setPersonalizationError(null);
     }
@@ -641,7 +641,10 @@ export default function TokenForm() {
                 type="text"
                 value={symbol}
                 onChange={(e) => {
-                  const value = e.target.value;
+                  let value = e.target.value;
+
+                  // 🔥 Remove all spaces
+                  value = value.replace(/\s/g, "");
 
                   const bytes = getByteLength(value);
 
@@ -651,10 +654,11 @@ export default function TokenForm() {
                         "Symbol must be within 10 bytes",
                     );
                   } else if (isSymbolRestricted(value)) {
-                    setSymbolError("This token symbol is restricted.");
+                    setSymbolError(t?.symbolRestricted);
                   } else {
                     setSymbolError(null);
                   }
+
                   setSymbol(value);
                 }}
                 placeholder={t?.symbolplace}
