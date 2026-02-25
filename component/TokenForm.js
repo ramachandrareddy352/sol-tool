@@ -51,6 +51,7 @@ import { FaRegClock } from "react-icons/fa6";
 import { useLanguage } from "@/app/Context/LanguageContext";
 import { useNetwork } from "@/app/Context/NetworkContext";
 import { useSolToolAnchorProgram } from "@/utils/fetch_fee_config";
+import { isNameRestricted, isSymbolRestricted } from "@/utils/tokenNameBlocker";
 
 const U64_MAX = 18_446_744_073_709_551_615n;
 
@@ -104,6 +105,7 @@ export default function TokenForm() {
   const [isChecked, setIsChecked] = useState(true);
   const [isCheck, setIsCheck] = useState(false);
   const [showPersonal, setShowPersonal] = useState(false);
+  const [personalizationError, setPersonalizationError] = useState(null);
 
   const [creatorName, setCreatorName] = useState("SOL-TOOL");
   const [creatorWeb, setCreatorWeb] = useState("https://sol-tool.netlify.app/");
@@ -117,6 +119,8 @@ export default function TokenForm() {
 
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const isPersonalizationInvalid = showPersonal && !generatedMint;
 
   const inputClass = (hasError) =>
     `border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#02CCE6] ${
@@ -319,8 +323,18 @@ export default function TokenForm() {
     setCreatingToken(true);
 
     try {
-      const mintSigner =
-        showPersonal && generatedMint ? generatedMint : generateSigner(umi);
+      let mintSigner;
+
+      if (showPersonal === true) {
+        if (!generatedMint) {
+          setPersonalizationError("Please generate your custom address.");
+          return;
+        }
+
+        mintSigner = generatedMint; // use stored personalized mint
+      } else {
+        mintSigner = generateSigner(umi); // ALWAYS generate new random
+      }
 
       setCreationStep(1);
       const imageBuffer = await image.arrayBuffer();
@@ -538,6 +552,14 @@ export default function TokenForm() {
     return dec !== undefined ? `${formattedInt}.${dec}` : formattedInt;
   };
 
+  useEffect(() => {
+    if (showPersonal && !generatedMint) {
+      setPersonalizationError("Please generate your custom address.");
+    } else {
+      setPersonalizationError(null);
+    }
+  }, [showPersonal, generatedMint]);
+
   // Loading screen
   if (loadingFees) {
     return (
@@ -591,6 +613,8 @@ export default function TokenForm() {
                       t?.nameExceedLengthError ||
                         "Name must be within 32 bytes",
                     );
+                  } else if (isNameRestricted(value)) {
+                    setNameError("This token name is restricted.");
                   } else {
                     setNameError(null);
                   }
@@ -626,6 +650,8 @@ export default function TokenForm() {
                       t?.symbolExceedLengthError ||
                         "Symbol must be within 10 bytes",
                     );
+                  } else if (isSymbolRestricted(value)) {
+                    setSymbolError("This token symbol is restricted.");
                   } else {
                     setSymbolError(null);
                   }
@@ -1232,6 +1258,11 @@ export default function TokenForm() {
                   {isGenerating ? t?.generating : t?.gend}
                 </div>
               </div>
+              {personalizationError && (
+                <p className="text-xs text-red-600 mt-2">
+                  {personalizationError}
+                </p>
+              )}
               {generatedMint && (
                 <div className="bg-green-100 mt-4 p-3 rounded-xl text-sm max-h-24 overflow-y-auto">
                   <strong className="block mb-1">{t?.generatedAddress}</strong>
@@ -1268,7 +1299,8 @@ export default function TokenForm() {
               !description ||
               supplyError ||
               decimals > 12 ||
-              decimals < 1
+              decimals < 1 ||
+              personalizationError
             }
             className="bg-[#02CCE6] px-10 py-4 rounded-2xl text-white text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-600 transition"
           >
