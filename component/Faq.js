@@ -124,7 +124,7 @@ const Faq = () => {
         <div className="mt-6 rounded-2xl overflow-hidden border shadow-sm">
           <iframe
             className="w-full aspect-video"
-            src="https://www.youtube-nocookie.com/embed/4hlYjUWQUo8?controls=1"
+            src="https://www.youtube-nocookie.com/embed/ykcZFyggBIM?controls=1"
             title="YouTube video"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
@@ -134,7 +134,7 @@ const Faq = () => {
 
         <div className="flex justify-end mt-3">
           <a
-            href="https://www.youtube.com/watch?v=Ziz_Gn_8jZI"
+            href="https://www.youtube.com/watch?v=ykcZFyggBIM"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-semibold text-red-600 hover:underline"
