@@ -84,9 +84,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-      </head>
+      {/* <head><link rel="icon" href="/favicon.ico" /></head> */}
       <body>
         <SolanaWalletProvider>
           <NetworkProvider>
