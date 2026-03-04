@@ -36,9 +36,9 @@ export const metadata = {
   },
 
   icons: {
-    icon: "https://www.sol-maker.com/logo.png",
-    shortcut: "https://www.sol-maker.com/logo.png",
-    apple: "https://www.sol-maker.com/logo.png",
+    icon: "/favicon.ico",
+    // shortcut: "https://www.sol-maker.com/logo.png",
+    // apple: "https://www.sol-maker.com/logo.png",
   },
 
   robots: {
