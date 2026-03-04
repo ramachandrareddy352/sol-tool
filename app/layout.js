@@ -35,11 +35,11 @@ export const metadata = {
     },
   },
 
-  icons: {
-    // icon: "/favicon.ico",
-    // shortcut: "https://www.sol-maker.com/logo.png",
-    // apple: "https://www.sol-maker.com/logo.png",
-  },
+  // icons: {
+  // icon: "/favicon.ico",
+  // shortcut: "https://www.sol-maker.com/logo.png",
+  // apple: "https://www.sol-maker.com/logo.png",
+  // },
 
   robots: {
     index: true,
