@@ -35,11 +35,13 @@ export const metadata = {
     },
   },
 
-  // icons: {
-  // icon: "/favicon.ico",
-  // shortcut: "https://www.sol-maker.com/logo.png",
-  // apple: "https://www.sol-maker.com/logo.png",
-  // },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      // { url: "/icon-192.png", sizes: "192x192", type: "image/png" }
+    ],
+    // apple: "/apple-touch-icon.png"
+  },
 
   robots: {
     index: true,
@@ -84,9 +86,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <head>
+      {/* <head>
         <link rel="icon" href="/favicon.ico" />
-      </head>
+      </head> */}
       <body>
         <SolanaWalletProvider>
           <NetworkProvider>
