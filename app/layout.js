@@ -36,9 +36,9 @@ export const metadata = {
   },
 
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    icon: "https://www.sol-maker.com/logo.png",
+    shortcut: "https://www.sol-maker.com/logo.png",
+    apple: "https://www.sol-maker.com/logo.png",
   },
 
   robots: {
@@ -64,7 +64,7 @@ export const metadata = {
     alternateLocale: ["en_US"],
     images: [
       {
-        url: "https://www.sol-maker.com/home.png",
+        url: "https://www.sol-maker.com/logo.png",
         width: 1200,
         height: 630,
         alt: "솔 메이커 - 솔라나 토큰 생성기",
@@ -77,13 +77,16 @@ export const metadata = {
     title: "솔 메이커 | 솔라나 토큰 생성기",
     description:
       "솔라나(Solana) 토큰 생성 및 관리를 위한 웹 도구. 빠른 발행과 권한 관리 지원.",
-    images: ["https://www.sol-maker.com/home.png"],
+    images: ["https://www.sol-maker.com/logo.png"],
   },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="ko" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+      </head>
       <body>
         <SolanaWalletProvider>
           <NetworkProvider>
